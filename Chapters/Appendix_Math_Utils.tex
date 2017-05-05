@@ -1,0 +1,11 @@
+Normalmente un motor gráfico incluye una serie de herramientas para facilitar el desarrollo, pero debido a las carencias de nuestro motor en este aspecto, he tenido que programarlas yo mismo.
+
+\section{Proyección punto-rayo y punto-línea}
+Entendiendo un rayo como un elemento formado por un punto y una dirección y una línea como un segmento de un rayo delimitado por dos puntos, he creado las siguientes dos funciones:
+
+\begin{lstlisting}
+float point_ray_projection(glm::vec3 ray_origin, glm::vec3 ray_direction, glm::vec3 point);
+bool point_line_projection(glm::vec3 line_A, glm::vec3 line_B, glm::vec3 point, glm::vec3& result);
+\end{lstlisting}
+
+Su funcionamiento es muy similar, de hecho la segunda hace uso de la primera para obtener el resultado, pero tienen dos diferencias importantes: ``point\_ray\_projection" devuelve la distancia entre el origen del rayo y la proyección de nuestro punto, en la dirección especificada, mientras que ``point\_line\_projection" devuelve un booleano que indica si la proyección está dentro de nuestra línea, y asigna a la referencia ``result" el punto exacto de la proyección.

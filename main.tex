@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass{report}
 \usepackage[utf8]{inputenc}
 
 % Style and margins:
@@ -32,20 +32,34 @@
   breaklines=true
 }
 
+\usepackage{titlesec}
+\titleformat{\chapter}
+  {\normalfont\Huge\bfseries}{\thechapter}{1em}{}
+
 % Data
 \title{Memoria}
 \author{Daniel Barca Casafont}
 \date{Mayo 2017}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
+\pagenumbering{roman}
 \begin{titlepage}
 \maketitle
 \end{titlepage}
 
+\cleardoublepage
 \tableofcontents
 
-\clearpage
-\input{Chapters/Chapter1}
+\cleardoublepage
+\pagenumbering{arabic}
+\chapter{Desarrollo}
+\input{Chapters/Paredes_y_agujeros}
+
+\cleardoublepage
+\appendix
+\chapter{Utilidades matemáticas}
+\input{Chapters/Appendix_Math_Utils}
 
 \end{document}

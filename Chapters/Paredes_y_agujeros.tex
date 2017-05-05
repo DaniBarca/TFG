@@ -74,7 +74,6 @@ Una limitación de este sistema es que los puntos deben introducirse en sentido 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\clearpage
 \subsection{Índices para la estructura básica}
 Para referirnos a cada uno de los vertices usaremos la nomenclatura ``A, B, A2, B2" como puede verse en la figura \ref{fig:nomenclatura_vertices}, además de los correspondientes ``AH, BH, A2H, B2H" en la parte alta de la pared. Posteriormente, para conectar los vértices generados nos basamos en la estructura de un cubo como se ve en la figura \ref{fig:estructura_cubo}.
 
@@ -110,7 +109,6 @@ Para definirlos se ha tenido especial cuidado en el orden de estos, pues la dire
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\clearpage
 \subsection{Modificando la estructura para permitir la inclusión de ventanas}
 \label{subsec:gen2}
 Una vez ya tenemos los primeros resultados debemos implementar la posibilidad de añadir puertas y ventanas a la habitación. Insertar el modelo correspondiente en cada caso no será un problema, pero para que el efecto sea convincente debemos poder ver a través de estos. Eso implica que tendremos que modificar la geometría de las paredes para que incluya huecos donde tengan que ir dichas ventanas y puertas.
@@ -162,6 +160,7 @@ El resto de información se calcula exactamente del mismo modo partiendo de los 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
 \subsection{@TODO-Generación de ventanas I: proyección sobre pared}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -226,7 +225,7 @@ Como se explica en el tutorial 13 de opengl-tutorial.org, para ello debemos reso
 
 
 \[ deltaPos1 = deltaUV1.x * T + deltaUV1.y * B \]
-\[ deltaPos2 = deltaUV2.x * T + deltaUV2.y * B;\]
+\[ deltaPos2 = deltaUV2.x * T + deltaUV2.y * B \]
 
 Esto se traduce en nuestro código a:
 
@@ -240,4 +239,11 @@ glm::vec3 tangent = (vec1 * deltaUV2.y - vec2 * deltaUV1.y) * r;
 glm::vec3 bitangent = (vec2 * deltaUV1.x  - vec1 * deltaUV2.x)*r;
 \end{lstlisting}
 
-Ahora que ya tenemos todos los pasos necesarios para generar paredes básicas, podemos empezar a ver los primeros resultados. A continuación podemos ver un ejemplo de habitación cerrada con el recorrido (0,0),(0,3),(3,6),(6,3),(6,0),(3,1.5).
+Ahora que ya tenemos todos los pasos necesarios para generar paredes básicas, podemos empezar a ver los primeros resultados. A continuación podemos ver un ejemplo de habitación cerrada con el recorrido (0,0),(0,3),(3,6),(6,3),(6,0),(3,1.5) (Fig. \ref{fig:walls_test_1}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{Walls_test1}
+    \caption{Resultado de las primeras pruebas.}
+    \label{fig:walls_test_1}
+\end{figure}
