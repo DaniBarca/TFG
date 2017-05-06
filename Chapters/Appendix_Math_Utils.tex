@@ -1,4 +1,4 @@
-Normalmente un motor gráfico incluye una serie de herramientas para facilitar el desarrollo, pero debido a las carencias de nuestro motor en este aspecto, he tenido que programarlas yo mismo.
+Normalmente un motor gráfico incluye una serie de herramientas para facilitar el desarrollo, pero debido a las carencias de nuestro motor en este aspecto, he tenido que programarlas yo mismo. Este apéndice se presenta como referencia para los fragmentos de código que hacen uso de estas herramientas a lo largo de este documento, y como muestra del funcionamiento de estas.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -65,6 +65,37 @@ bool Utils::point_line_projection(
 	);
 }
 \end{lstlisting}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Proyección punto-plano y punto-rectángulo}
+\label{sec:pointplaneproj}
+De un modo similar a lo que hemos visto en el apartado \ref{sec:pointrayproj}, podemos calcular la proyección a partir del producto punto.
+
+Para ello debemos disponer de la normal de dicho plano. En el caso de la proyección punto-plano la requerimos como parámetro para definir el plano, pero en el caso de la proyección punto-rectángulo la calcularemos a partir de 3 puntos del plano. Este detalle es importante porque el orden de dichos puntos afectará a la dirección de la normal; no podemos hacer nada al respecto más que alertar a quien utilice esta función.
+
+Dados 3 puntos $A$, $B$ y $C$, la normal del plano que forman es el producto vectorial de los vectores que van de un punto hacia los otros dos, normalizados, por ejemplo $N = AB \times AC$.
+
+Teniendo esto en cuenta:
+\begin{lstlisting}
+glm::vec3 Utils::point_plane_projection(
+    glm::vec3 origin, glm::vec3 normal, glm::vec3 point
+) {
+	normal = glm::normalize(normal);
+	float dist = glm::dot(point - origin, normal);
+	return point - normal * dist;
+}
+
+glm::vec3 Utils::point_rec_projection(
+    glm::vec3 A, glm::vec3 B, glm::vec3 C, glm::vec3 point
+) {
+	glm::vec3 normal = glm::normalize(glm::cross(B - A, C - A));
+	return  point_plane_projection(A, normal, point);
+}
+\end{lstlisting}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

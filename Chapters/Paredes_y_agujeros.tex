@@ -161,13 +161,65 @@ El resto de información se calcula exactamente del mismo modo partiendo de los 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
-\subsection{@TODO-Generación de ventanas I: proyección sobre pared}
+\subsection{Generación de ventanas I: proyección sobre pared}
+Como ya se ha mencionado en el apartado \ref{subsec:gen2}, las ventanas están definidas por un punto, una altura y un ancho. Como podemos ver no se incluye ninguna información respecto a que pared es la que va a contener dicha ventana; lo que haremos será coger la pared más cercana al punto dado.
 
+Para ello proyectaremos el punto sobre la línea $AB$ de cada una de las paredes, y calcularemos la distacia hasta cada una de las proyecciones para ver cuál es la más cercana (véase el apéndice \ref{sec:pointrayproj} sobre la proyección punto-línea):
+
+\begin{lstlisting}
+unsigned int WallManager::findWall(glm::vec3 point) {
+	unsigned int nearest = (unsigned int)-1;
+	float nearest_distance = -1.f, distance;
+	
+	for (unsigned int i = 0; i < n_walls; ++i) {
+		glm::vec3 projection;
+		if (Utils::point_line_projection(
+		        (*wall_list[i])[LogicPlane::A1], 
+		        (*wall_list[i])[LogicPlane::B1], 
+		        point, 
+		        projection
+		    )) {
+			
+			distance = glm::length(projection - point);
+			if ( nearest_distance < 0.f || 
+			     distance < nearest_distance
+			   ) {
+				nearest_distance = distance;
+				nearest = i;
+			}
+		}
+	}
+	return nearest;
+}
+\end{lstlisting}
+
+Todas las ventanas o puertas han de ser necesariamente rectangulares. Esta es una precondición que se ha impuesto desde desarrollo para simplificar el cálculo de los agujeros, dado que es más sencillo incorporar geometrías más complejas inclyendo paredes falsas dentro del modelo de la ventana o puerta. Por ejemplo, si en algún momento quisiéramos incorporar una ventana redonda, sería más sencillo incluir 4 esquinas de pared a la ventana permitiendo que el agujero sea rectangular igualmente.
+
+Como preparación para el próximo apartado (\ref{sec:wallgeowindows}) calculamos sobre la pared los 4 puntos que delimitarán la ventana sobre la pared. Para ello proyectamos el punto de la pared sobre el plano que forma esta, y calculamos el resto de puntos desplazándonos por dicho plano (véase el apéndice \ref{sec:pointplaneproj} sobre la proyección punto-rectángulo):
+
+\begin{lstlisting}
+void WindowGenerator::projectVertices(WallData& wall, WallData::Window& window) {
+	glm::vec3 plane_A = wall[LogicPlane::A1];
+	glm::vec3 plane_B = wall[LogicPlane::B1];
+	glm::vec3 plane_C = wall[LogicPlane::A1H];
+
+	glm::vec3 AB_dir = glm::normalize(plane_B - plane_A);
+	glm::vec3 AC_dir = glm::normalize(plane_C - plane_A);
+
+	glm::vec3 origin = Utils::point_rec_projection(plane_A, plane_B, plane_C, window.origin);
+
+	window[LogicPlane::A1] = origin;
+	window[LogicPlane::B1] = origin + AB_dir * window.width;
+	window[LogicPlane::A1H] = origin + AC_dir * window.height;
+	window[LogicPlane::B1H] = window[LogicPlane::A1H] + AB_dir * window.width;
+}
+\end{lstlisting}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{@TODO-Generación de ventanas II: modificación de la geometría de la pared}
+\label{sec:wallgeowindows}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
