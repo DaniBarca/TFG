@@ -13,6 +13,10 @@
 }
 \setlength{\parskip}{3mm}
 
+\usepackage{titlesec}
+\titleformat{\chapter}
+  {\normalfont\Huge\bfseries}{\thechapter}{1em}{}
+
 % For figures:
 \usepackage{graphicx}
 \usepackage{float}
@@ -32,9 +36,8 @@
   breaklines=true
 }
 
-\usepackage{titlesec}
-\titleformat{\chapter}
-  {\normalfont\Huge\bfseries}{\thechapter}{1em}{}
+% Math
+\usepackage{amsmath}
 
 % Data
 \title{Memoria}
