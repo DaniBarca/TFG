@@ -30,7 +30,7 @@ Así pues, en la figura \ref{fig:io_generatewalls} se puede ver la conversión d
 
 Nótese que el output está formado por listas de valores planos porque el motor así lo requiere. Por ejemplo, la lista de vértices está formada por los valores ``x,y,z" de cada uno  sucesivamente.
 
-La parte más sencilla en el momento de generar una pared es encontrar las posiciones de los diferentes vértices que van a formarla. Por cada pared tenemos tres puntos 2D relevantes: las esquinas izquierda de las paredes anterior, actual, y siguiente. A partir de estos tres puntos podemos deducir la información de la figura \ref{fig:wall_vectors}, donde los vectores N1 y N2 son las normales de cada pared, siempre hacia la izquierda.
+La parte más sencilla en el momento de generar una pared es encontrar las posiciones de los diferentes vértices que van a formarla. Por cada pared tenemos tres puntos 2D relevantes: las esquinas izquierda de las paredes anterior, actual, y siguiente. A partir de estos tres puntos podemos deducir la información de la figura \ref{fig:wall_vectors}, donde los vectores N1 y N2 son las normales de cada pared, siempre hacia el exterior de la estancia. 
 
 \begin{figure}[H]
     \centering
@@ -49,7 +49,7 @@ glm::vec3 current_normal = glm::normalize(glm::vec3(-v_cn.z, 0.0f, v_cn.x));
 glm::vec3 previous_normal = glm::normalize(glm::vec3(-v_pc.z, 0.0f, v_pc.x));
 \end{lstlisting}
 
-El vector que hay sobre la esquina ``i" representa la dirección que ha de seguir la línea que separa ambas paredes y se obtiene como la suma y normalización de los vectores N1 y N2:
+Se trata de una forma muy sencilla de extraer las normales, especialmente al estar trabajando en 2 dimensiones, pero debido a esto el orden en que se introduzcan las paredes será muy importante, siempre antihorario. El vector que hay sobre la esquina ``i" representa la dirección que ha de seguir la línea que separa ambas paredes y se obtiene como la suma y normalización de los vectores N1 y N2:
 
 \begin{lstlisting}
 glm::vec3 dir = glm::normalize(current_normal + previous_normal);
@@ -162,6 +162,7 @@ El resto de información se calcula exactamente del mismo modo partiendo de los 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
 \subsection{Generación de ventanas I: proyección sobre pared}
+\label{sec:wallgenwindowsi}
 Como ya se ha mencionado en el apartado \ref{subsec:gen2}, las ventanas están definidas por un punto, una altura y un ancho. Como podemos ver no se incluye ninguna información respecto a que pared es la que va a contener dicha ventana; lo que haremos será coger la pared más cercana al punto dado.
 
 Para ello proyectaremos el punto sobre la línea $AB$ de cada una de las paredes, y calcularemos la distacia hasta cada una de las proyecciones para ver cuál es la más cercana (véase el apéndice \ref{sec:pointrayproj} sobre la proyección punto-línea):
@@ -193,9 +194,9 @@ unsigned int WallManager::findWall(glm::vec3 point) {
 }
 \end{lstlisting}
 
-Todas las ventanas o puertas han de ser necesariamente rectangulares. Esta es una precondición que se ha impuesto desde desarrollo para simplificar el cálculo de los agujeros, dado que es más sencillo incorporar geometrías más complejas inclyendo paredes falsas dentro del modelo de la ventana o puerta. Por ejemplo, si en algún momento quisiéramos incorporar una ventana redonda, sería más sencillo incluir 4 esquinas de pared a la ventana permitiendo que el agujero sea rectangular igualmente.
+Todas las ventanas o puertas han de ser necesariamente rectangulares. Esta es una precondición que se ha impuesto desde desarrollo para simplificar el cálculo de los agujeros, dado que es más sencillo incorporar geometrías más complejas incluyendo paredes falsas dentro del modelo de la ventana o puerta. Por ejemplo, si en algún momento quisiéramos incorporar una ventana redonda, sería más sencillo incluir 4 esquinas de pared a la ventana permitiendo que el agujero sea rectangular igualmente.
 
-Como preparación para el próximo apartado (\ref{sec:wallgeowindows}) calculamos sobre la pared los 4 puntos que delimitarán la ventana sobre la pared. Para ello proyectamos el punto de la pared sobre el plano que forma esta, y calculamos el resto de puntos desplazándonos por dicho plano (véase el apéndice \ref{sec:pointplaneproj} sobre la proyección punto-rectángulo):
+Como preparación para el próximo apartado (\ref{sec:wallgenwindowsii}) calculamos sobre la pared los 4 puntos que delimitarán la ventana sobre la pared. Para ello proyectamos el punto de la pared sobre el plano que forma esta, y calculamos el resto de puntos desplazándonos por dicho plano (véase el apéndice \ref{sec:pointplaneproj} sobre la proyección punto-rectángulo):
 
 \begin{lstlisting}
 void WindowGenerator::projectVertices(WallData& wall, WallData::Window& window) {
@@ -218,8 +219,32 @@ void WindowGenerator::projectVertices(WallData& wall, WallData::Window& window) 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{@TODO-Generación de ventanas II: modificación de la geometría de la pared}
-\label{sec:wallgeowindows}
+\subsection{Generación de ventanas II: modificación de la geometría de la pared}
+\label{sec:wallgenwindowsii}
+
+En el punto en el que hemos cerrado el apartado \ref{sec:wallgenwindowsii}, ya sabemos el punto en que están los extremos de la ventana sobre la pared. En este apartado explico cómo dividir la pared en diferentes planos y descartar aquellos que correspondan a un agujero.
+
+Una vez más las proyecciones cobran mucho protagonismo (véase el apéndice \ref{sec:pointrayproj} sobre la proyección punto-línea). Lo primero que se busca es dividir el plano de la pared por los vértices de la ventana que queremos añadir, obteniendo una colección de planos como se puede ver en la figura \ref{fig:wall_separacion}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{Separaciones_paredes}
+    \caption{Separación de la pared en planos}
+    \label{fig:wall_separacion}
+\end{figure}
+
+El algoritmo para conseguir esto tiene como entrada y salida una lista de planos, que empieza siendo uno solo que cubre toda la pared. Mientras iteramos los puntos, proyectamos estos sobre cada lado para obtener los puntos por los que hay que cortar los planos, y posteriormente se añaden a la lista de planos desechando el original. En caso de que una de las proyecciones no contribuya a crear un nuevo plano (como por ejemplo, los puntos inferiores de la puerta en la figura \ref{fig:mult_and_red_windows}) la ignoramos.
+
+Posteriormente se comprueba cuales de estos planos forman parte de una ventana y se eliminan de la lista, dejando un hueco en dicha posición. Este algoritmo permite además añadir múltiples ventanas, aumentando la posible complejidad de la pared.
+
+Por último se reprocesan los planos generados comprobando si sus lados coinciden en alguna dirección, en cuyo caso se reúnen para reducir la complejidad. En la figura \ref{fig:mult_and_red_windows}, se puede ver un ejemplo de como se separan los planos con múltiples ventanas, y cómo se reúnen los planos adyacentes.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{mult_window_and_reduction}
+    \caption{Ejemplo de pared con una ventana y una puerta, y muestra de una posible reducción de los planos.}
+    \label{fig:mult_and_red_windows}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -274,7 +299,7 @@ glm::vec3 normal = glm::normalize(glm::cross(vec1, vec2));
 
 Las tangentes y bitangentes son un poco más complicadas: todo vector tiene infinitos vectores tangentes, pero en este caso no nos sirve cualquiera. El vector tangente a la normal tiene que estar siempre alineado con las uv.
 
-Como se explica en el tutorial 13 de opengl-tutorial.org, para ello debemos resolver el siguiente sistema de ecuaciones:
+Como se explica en el tutorial 13 de opengl-tutorial.org \cite{opengltutorials}, para ello debemos resolver el siguiente sistema de ecuaciones:
 
 
 \[ deltaPos1 = deltaUV1.x * T + deltaUV1.y * B \]

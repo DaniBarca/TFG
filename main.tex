@@ -12,6 +12,7 @@
     twoside
 }
 \setlength{\parskip}{3mm}
+\usepackage{url}
 
 \usepackage{titlesec}
 \titleformat{\chapter}
@@ -40,9 +41,9 @@
 \usepackage{amsmath}
 
 % Data
-\title{Memoria}
+\title{Desarrollo de aplicación 3D multiplataforma}
 \author{Daniel Barca Casafont}
-\date{Mayo 2017}
+\date{Junio de 2017}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -54,20 +55,45 @@
 
 \cleardoublepage
 \tableofcontents
-
+\cleardoublepage
 \pagenumbering{arabic}
+
+\chapter{Introducción}
+\input{Chapters/Intro}
 
 \cleardoublepage
 \chapter{Descripción del proyecto}
 \input{Chapters/Descripcion_del_proyecto}
 
 \cleardoublepage
+\chapter{Motor gráfico}
+\input{Chapters/MotorGrafico/APIGrafica}
+\input{Chapters/MotorGrafico/GestionMemoria}
+\input{Chapters/MotorGrafico/Diseno}
+\input{Chapters/MotorGrafico/Emscripten}
+\input{Chapters/MotorGrafico/Otras_Plataformas}
+\input{Chapters/MotorGrafico/Shaders}
+
+\cleardoublepage
+\chapter{Diseño}
+\input{Chapters/Diseno}
+
+\cleardoublepage
 \chapter{Desarrollo}
-\input{Chapters/Paredes_y_agujeros}
+\input{Chapters/Desarrollo/Paredes_y_agujeros}
+
+\cleardoublepage
+\chapter{Conclusiones}
 
 \cleardoublepage
 \appendix
 \chapter{Utilidades matemáticas}
 \input{Chapters/Appendix_Math_Utils}
+
+\chapter{Patrones de diseño}
+\input{Chapters/Appendix_Patterns}
+
+\bibliographystyle{unsrt}
+\bibliography{Bibliography}
 
 \end{document}
