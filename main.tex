@@ -13,6 +13,10 @@
 }
 \setlength{\parskip}{3mm}
 \usepackage{url}
+\usepackage{times}
+\pagestyle{plain}
+
+\renewcommand{\contentsname}{Indice}
 
 \usepackage{titlesec}
 \titleformat{\chapter}
@@ -41,7 +45,9 @@
 \usepackage{amsmath}
 
 % Data
-\title{Desarrollo de aplicación 3D multiplataforma}
+%Desenvolupament d'aplicació 3D per escriptori i web mitjançant Emscripten
+%Development of 3D application for desktop and web using Emscripten
+\title{Desarrollo de aplicación 3D para escritorio y web mediante Emscripten}
 \author{Daniel Barca Casafont}
 \date{Junio de 2017}
 
@@ -55,6 +61,14 @@
 
 \cleardoublepage
 \tableofcontents
+
+\cleardoublepage
+\begin{abstract}
+En este documento se recoge el proceso de desarrollo de una aplicación 3D multiplataforma para la empresa Interiorvista, la cual permite configurar y visualizar estancias con el lenguaje de programación C++ dados unos requerimientos inciales. Haciendo uso de Emscripten, el código ha sido adaptado a las limitaciones de las plataformas web que no encontramos en aplicaciones de escritorio tradicionales, tales como la existencia de un único hilo de ejecución o la ausencia de un sistema de ficheros. También se deberá adaptar el motor gráfico de la empresa para que funcione mediante WebGL o Vulkan en función de la plataforma donde se ejecute. Además, se discuten detalles sobre el diseño de software y el proceso de desarrollo de la aplicación en sí.
+
+This document describes the process of developing a 3D multiplatform application for the company Interiorvista, that allows users to configure and visualize rooms with the C++ programming language given some initial requirements. Using Emscripten, the code has been adapted to the limitations of web platforms that are not found in traditional desktop applications, such as the existence of only one single execution thread or the absence of a file system. The company's graphics engine must also be adapted in order to work using WebGL or Vulkan depending on the platform where it's running. In addition, this document discusses details about the software design and the development process of the application itself.
+\end{abstract}
+
 \cleardoublepage
 \pagenumbering{arabic}
 
@@ -67,12 +81,11 @@
 
 \cleardoublepage
 \chapter{Motor gráfico}
-\input{Chapters/MotorGrafico/APIGrafica}
-\input{Chapters/MotorGrafico/GestionMemoria}
-\input{Chapters/MotorGrafico/Diseno}
-\input{Chapters/MotorGrafico/Emscripten}
-\input{Chapters/MotorGrafico/Otras_Plataformas}
-\input{Chapters/MotorGrafico/Shaders}
+\input{Chapters/Engine}
+
+\cleardoublepage
+\chapter{Compilación a web con Emscripten}
+\input{Chapters/Emscripten}
 
 \cleardoublepage
 \chapter{Diseño}
