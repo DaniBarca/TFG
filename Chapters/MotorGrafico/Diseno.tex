@@ -76,10 +76,67 @@ En el momento de renderizar se utilizan luces para saber con qué intensidad deb
 En la realidad las luces pueden tener formas muy variadas, pero en el motor se reducen a: puntos de luz, luces direccionales, focos, luces de área, luces esféricas y luces cilíndricas. El tipo de luz hará variar el modo en que incide sobre la escena. Las propiedades de esta se asignan en el momento de crear el componente y pueden cambiarse en cualquier momento.
 
 \subsubsection{Cámara}
-La cámara indica el punto de vista desde el que se realizará el renderizado de la escena. 
+La cámara indica el punto de vista desde el que se realizará el renderizado de la escena. Existen dos tipos (fig. \ref{fig:camera}):
+
+\begin{itemize}
+    \item Cámara ortogonal: se caracteriza por mostrar todos los elementos con la misma escala, sin importar la distancia en que estén. Es especialmente útil para comparar tamaños de distintos elementos, y la utilizaremos para vistas superior y frontales de la habitación, pensados como modos de edición de esta. Sus propiedades son el tamaño, en alto y ancho, de su campo de visión.
+    \item Cámara en perspectiva: imita el modo en que vemos los objetos en la realidad, teniendo en cuenta la distancia en que se encuentran. Da resultados mucho más satisfactorios para visualizar la habitación, y transmite más información espacial. Sus propiedades son el ángulo de su campo de visión, más conocido como FOV (field of view), y los planos cercano y lejano de este, comúnmente conocidos como near plane y far plane.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.75]{camera}
+    \caption{Diferencias entre una cámara en perspectiva y ortogonal, respectivamente.}
+    \label{fig:camera}
+\end{figure}
 
 \subsection{Materiales}
 \label{materials}
-El material de un objeto 3D describe el aspecto que ha de tener la superficie de este en el momento de renderizarlo.
+El material de un objeto 3D describe el aspecto que ha de tener la superficie de este en el momento de renderizarlo. Para conseguirlo se asocian una serie de texturas del mismo tamaño y se asocia cada uno de los vértices con coordenadas de dos componentes dentro de estas texturas (conocidas como UV, véase \ref{mesh_light_cam}). Como se explica en el apartado \ref{shaders}, el shader interpola los datos entre dos vértices a cada uno de los píxeles intermedio. De este modo sabiendo la UV que corresponde a cada uno de los vértices podemos saber la que corresponde a cada píxel del objeto 3D.
+
+Las texturas que forman el material pueden ser un color único (que equivale a aplicar una textura de ese color o una imagen importada desde un fichero. El material está formado por los siguientes tipos de texturas o mapas:
+
+\begin{itemize}
+    \item Albedo: En el terreno de la física, el albedo es la cantidad de luz que rebota sobre una superficie tras incidir sobre esta\cite{def_albedo}. En nuestro caso podemos entenderlo como la textura que expresa el color que ha de tener la superficie en cada punto.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.4\linewidth]{material_example/albedo_example}
+        \caption{Ejemplo de Albedo\cite{free_pbr}.}
+        \label{fig:albedo_ex}
+    \end{figure}
+    \item Mapa de normales: Habitualmente, la normal de la superficie se expresa a partir de la propia geometría de esta, pero a veces queremos ciertos detalles que requerirían aumentar mucho la resolución de la malla, aumentando con ello también el peso del modelo 3D y el coste computacional de procesar y renderizar dicha información. Para evitar esto podemos utilizar una textura de normales: en cada píxel, a la normal de la superficie que hemos interpolado a partir de los vértices próximos, le sumamos la normal correspondiente extraída del mapa de normales. Esto permite crear un efecto de profundidad o rugosidad sin modificar la geometría del objeto.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.4\linewidth]{material_example/normal_map_example}
+        \caption{Ejemplo de Mapa de Normales\cite{free_pbr}.}
+        \label{fig:normal_map_ex}
+    \end{figure}
+    \item Aspereza (roughness): Se produce cuando la superficie tiene micro-imperfecciones que afectan a los reflejos, haciendo que se difuminen. Cuanto mayor sea la aspereza, más se dispersará la luz al rebotar contra la superficie, y más se difuminará el reflejo; mientras que en una superficie sin imperfecciones la luz se reflejará uniformemente.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.6\linewidth]{material_example/roughness_example}
+        \caption{El roughness simula las micro-imperfecciones de la superficie.}
+        \label{fig:roughness_ex}
+    \end{figure}
+    \item Fresnel\cite{marmoset_basicpbr}: El reflejo Fresnel (nombre que hace referencia a su descubridor, Augustin-Jean Fresnel) es la propiedad según la cual los materiales reflejan más cuanto más grande es el ángulo entre la normal de la superfície y la dirección de la luz.
+    %\item Reflejo Anisotrópico\cite{anisotropic_ref}: Se produce cuando la superfície tiene imperfecciones organizadas en un patrón, de manera que el ángulo desde el que observamos hace variar el reflejo resultante. Se hace especialmente evidente en metales pulidos, ciertos tejidos, pelo o grandes superficies de agua.
+    \item Metalizado\cite{marmoset_basicpbr}: Los metales tienden a reflejar la luz, razón por la que se define un valor de metalizado para especificar la cantidad de luz que refleja una superficie. Con el metalizado también se puede definir un tinte para la luz reflejada (por ejemplo, reflejos amarillentos en la superficie del oro).
+    \item Oclusión ambiental\cite{ambient_occlusion}: Se trata de un efecto del que a menudo se abusa, dado que no existe en la realidad. El mapa de oclusión permite oscurecer ciertas zonas de la geometría, normalmente los puntos que forman ángulos más cerrados. Resulta efectivo para imitar ciertas sombras que se producen en estos puntos, pero en exceso puede resultar artificial.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.4\linewidth]{material_example/ambient_occlussion_example}
+        \caption{Ejemplo de mapa de oclusión ambiental.}
+        \label{fig:occlusion_ex}
+    \end{figure}
+\end{itemize}
 
 \subsection{Gestión de memoria}
+Una de las operaciones que más tiempo demandan en C++ es solicitar nueva memoria al sistema operativo. Debido a eso, abusar de las asignaciones de memoria, por ejemplo haciéndolas dentro de bucles (como el bucle de Manta), puede hacer que el programa se ralentice considerablemente.
+
+Para minimizar la cantidad de asignaciones que realizamos, manta tiene un único "bloque de memoria" (más conocido como memory pool). El memory pool asigna una gran cantidad de memoria al inicializar el programa y nos da acceso a esta cada vez que lo necesitemos. En caso de no necesitar más dicha memoria, podemos solicitar al memory pool que la libere, dejándola disponible en adelante. Hacer esto es computacionalmente gratuito, de modo que no necesitamos preocuparnos de las asignaciones que necesitemos hacer.
+
+Sin embargo, existen dos desventajas importantes:
+
+Por un lado necesitamos saber desde el principio cuánta memoria podemos llegar a necesitar dado que esta solo se va a asignar una vez; en caso de superar ese límite de memoria tendremos un error de segmentación que detendrá el programa.
+
+Por otro lado, también necesitamos tener mucho más cuidado con la memoria que solicitemos al memory pool: si nos equivocamos al manejar la memoria asignada, C++ suele responder con un error de segmentación; pero si hacemos lo mismo con la memoria del memory pool, ese error no se producirá y estaremos modificando datos que corresponden a otras variables. Al fin y al cabo, el puntero que recibimos a punta a una posición desconocida del memory pool, y nada nos impide desplazarnos por este sin tener en cuenta el tamaño de la memoria que nos ha asignado.
