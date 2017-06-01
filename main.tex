@@ -44,6 +44,10 @@
 % Math
 \usepackage{amsmath}
 
+%Bibliography
+\usepackage[style=verbose-ibid, backend=biber,sorting=none]{biblatex}
+\bibliography{Bibliography}
+
 % Data
 %Desenvolupament d'aplicació 3D per escriptori i web mitjançant Emscripten
 %Development of 3D application for desktop and web using Emscripten
@@ -106,7 +110,8 @@ This document describes the process of developing a 3D multiplatform application
 \chapter{Patrones de diseño}
 \input{Chapters/Appendix_Patterns}
 
-\bibliographystyle{unsrt}
-\bibliography{Bibliography}
+%\bibliographystyle{unsrt}
+%\bibliography{Bibliography}
+\printbibliography
 
 \end{document}

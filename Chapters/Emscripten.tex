@@ -1,8 +1,36 @@
+\label{emscripten}
 \section{Exportación a Web}
+Uno de los puntos fuertes de nuestro planner es el poder ejecutarlo en web. El hecho de estar programado en C++ sin embargo, dificulta esta tarea. Teniendo cuenta una serie de consideraciones, podemos adaptar código C++ a web a través de Emscripten.
 
 \subsection{Sobre Emscripten}
+Emscripten es capaz de compilar código LLVM (Low Level Virtual Machine) a Javascript. LLVM es un lenguaje de código máquina que se puede generar compilando desde otros lenguajes, entre ellos C++. Dado que Emscripten compila desde LLVM (y no C++ directamente) realmente esto significa que podemos ejecutar código escrito en diversos lenguajes a través de Emscripten.
 
-\subsection{Aptación de la API}
+Emscripten\footfullcite{kripken_cppcon} nació como respuesta a la necesidad de escribir programas para web en lenguajes tradicionales de escritorio, con el objetivo de ganar velocidad, trabajar con un lenguaje conocido, y aprovechar las librerías existentes en dichos lenguajes. Hasta su aparición la única alternativa para poder hacer esto era el uso de plugins embebidos en el navegador, lo cual fracasó debido a la falta de estandarización y a la evolución de los propios navegadores, que cada vez más rechazan los plugins desde la popularización de las plataformas móviles.
+
+Dada la extensión de funcionalidades de Javascript, para realizar el compilado se ha utilizado un subset de este, ``asm.js". Asm.js es un lenguaje intermedio que podemos ejecutar en navegadores; tiene una serie de restricciones con respecto a javascript, como por ejemplo el hecho de ser un lenguaje tipado (aunque javascript no lo es, asm.js comprueba el tipo de cada variable antes de trabajar con ella) o el requerimiento de trabajar sobre una única pila de memoria (un simple array de javascript dentro del cual deben estar todos los datos que utilice el programa).
+
+Si aplicamos esta filosofía al código que programamos en C++, podemos entender fácilmente que dicha pila de memoria equivale a la memoria tal y como la ve un programa tradicional en C++. Podemos reservar memoria dentro de esta pila, y tener punteros a posiciones de la pila (que en realidad no son más que simples índices). Tiene un funcionamiento similar al Memory Pool descrito en el apartado \ref{engine_memory}.
+
+Aunque en cuanto a eficiencia el código en asm.js en web está en torno al 50-67\% de su equivalente en escritorio, los resultados pueden ser sorprendentes pues asm.js es capaz de superar en velocidad a su equivalente escrito en javascript tradicional. Al trabajar sobre datos estáticos y memoria pre-inicializada, el código resultante cuenta con una serie de optimizaciones que un programador no suele realizar a mano.
+
+La tendencia actual del web es la ejecución de código máquina, para lo cual está en fase de desarrollo la tecnología ``WebAssembly". Sin embargo, aún a día de hoy no está del todo claro cuando estará lista esta funcionalidad, por lo que el papel de asm.js es importante como paso intermedio, para que los programadores puedan ir adoptando la tecnología antes de ser funcional del todo. Emscripten también tiene un rol muy importante en este proceso, porque es el encargado tanto de compilar a asm.js hoy como lo será de compilar a WebAssembly en el futuro\footfullcite{webasm_roadmap}.
+
+Emscripten ya se está utilizando hoy en día en diversos proyectos de cierta categoría, especialmente en aplicaciones gráficas.
+
+Es importante también tener en cuenta algunos de los defectos de utilizar Emscripten respecto a programar directamente en Javascript:
+
+\begin{itemize}
+    \item Necesitamos saber desde el primer momento cuanta memoria necesitaremos. Aunque superar dicha memoria no hará que el programa falle (Emscripten es capaz de reasignar memoria cuando se sobrepasa el límite), permitir que esto ocurra no es en absoluto recomendable, puesto que ralentizaría el programa. No podemos permitirnos esto en nuestro caso teniendo en cuenta que la eficiencia es clave.
+    \item Se requiere un proceso de adaptación considerable: muchas de las cosas que el programador da por sentadas en C++ no se cumplen en Javascript. Como explicaré a lo largo del capítulo \ref{emscripten}, no podemos inicializar el programa, gestionar los ficheros o ejecutar el bucle del programa del mismo modo en que lo haríamos en C++. 
+    \item Perdemos poder de decisión sobre algunas de las tecnologías que podemos querer utilizar porque simplemente no están disponibles, como versiones modernas de OpenGL o algunas operaciones SIMD. Esto cambiará en el futuro según avance la tecnología, pero a día de hoy es un limitante.
+    \item Si queremos que el mismo código se pueda ejecutar en diversas plataformas, habrá otro proceso de adaptación considerable para hacer que el programa tenga en cuenta las consideraciones mencionadas según la plataforma. En realidad esto es más bien un defecto de la programación multi-plataforma que de Emscripten, pero se debe tener en cuenta que existirá un esfuerzo extra de desarrollo y un aumento de la complejidad del código.
+    \item El debugging resulta sensiblemente más incómodo que con javascript o C++ en escritorio\footfullcite{emscripten_debugging}. Normalmente para seguir los errores se hace uso de impresiones a través de la consola y el stack-trace que devuelve Emscripten cuando se produce un error (el cual no siempre es suficientemente descriptivo).
+\end{itemize}
+
+\subsection{Adaptación de la API gráfica}
+Como hemos visto en el apartado \ref{APIS}, el motor está pensado para funcionar utilizando la API gráfica Vulkan. El primer paso para hacer funcionar el programa con Emscripten ha sido utilizar una API gráfica que sea compatible con las tecnologías web.
+
+WebGL está basado en OpenGL ES 2, y Emscripten puede reconocer las llamadas a esta segunda API y transformarlas en llamadas a WebGL. De modo que para hacer funcionar el motor ``bastará" con buscar los puntos donde se interactúe con la API de Vulkan y cambiarlos para que funcionen con OpenGL ES 2.
 
 \subsection{Gestión de ficheros}
 

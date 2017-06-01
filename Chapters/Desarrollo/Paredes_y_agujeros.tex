@@ -300,7 +300,7 @@ glm::vec3 normal = glm::normalize(glm::cross(vec1, vec2));
 
 Las tangentes y bitangentes son un poco más complicadas: todo vector tiene infinitos vectores tangentes, pero en este caso no nos sirve cualquiera. El vector tangente a la normal tiene que estar siempre alineado con las uv.
 
-Como se explica en el tutorial 13 de opengl-tutorial.org \cite{opengltutorials}, para ello debemos resolver el siguiente sistema de ecuaciones:
+Como se explica en el tutorial 13 de opengl-tutorial.org \footfullcite{opengltutorials}, para ello debemos resolver el siguiente sistema de ecuaciones:
 
 
 \[ deltaPos1 = deltaUV1.x * T + deltaUV1.y * B \]
