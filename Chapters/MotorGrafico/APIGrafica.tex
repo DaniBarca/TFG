@@ -4,6 +4,13 @@
 Según la plataforma en que se esté ejecutando la aplicación, se hará uso de una API gráfica u otra. Por defecto Manta ha sido desarrollado para funcionar en escritorio haciendo uso de Vulkan, pero esta API no está disponible en web, por lo que tendremos que utilizar OpenGL ES 2 y WebGL en este caso.
 
 \subsection{Vulkan}
+Entre las diferentes APIs gráficas que existen, la tendencia actual es la de dar cada vez más control al desarrollador sobre lo que ocurre entre la aplicación y la gráfica, dando acceso de bajo nivel al hardware. Vulkan es la respuesta de software libre a esta tendencia, y una de las APIs que más tracción está recogiendo últimamente.
+
+Al ofrecer control de bajo nivel, con Vulkan pueden realizarse muchas optimizaciones que en una API de alto nivel no sería posible realizar\footfullcite{vulkan_spec}. Vulkan facilita el uso de múltiples dispositivos de hardware con diversos propósitos (la GPU puede utilizarse también para realizar cálculos en paralelo, sin estar necesariamente renderizando) y el uso de multithreading.
+
+Para ello Vulkan puede detectar y listar los dispositivos de hardware que se encuentran disponibles en la máquina, así como sus capacidades y especificaciones. Por cada dispositivo se crea una cola de comandos, que describen las acciones a realizar por el hardware.
+
+Los comandos pueden tener distintos estados que permiten controlar el flujo de la aplicación, especialmente en aplicaciones multinúcleo.
 
 \subsection{OpenGL ES 2 y WebGL}
 

@@ -1,40 +1,60 @@
 \section{Diseño y estructura del motor}
+\label{engine_design}
+Antes de empezar a trabajar es necesario conocer cómo comunicar la aplicación con Manta, el motor gráfico que será utilizado para el desarrollo, y tener al menos una buena idea del modo en que el motor tratará la información que le proporcionemos.
 
-Antes de empezar a trabajar debemos conocer cómo vamos a comunicarnos con el motor gráfico y tener al menos una buena idea de la manera en que tratará la información que le proporcionemos.
+La aplicación final estará dividida en tres partes importantes: la aplicación en sí, el framework, y el núcleo o core (fig. \ref{fig:estructura_app}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.70]{estructura_app}
+    \caption{Estructura de la aplicación.}
+    \label{fig:estructura_app}
+\end{figure}
+
+En el momento de manejar la escena, la aplicación en ningún momento se comunicará directamente con el núcleo del motor, sino que lo hará a través del framework. El framework está diseñado para facilitar la usabilidad, mientras que el núcleo prioriza la eficiencia, de modo que utilizando este sistema no se renuncia a ninguna de las dos cosas.
+
+Otros elementos más sencillos del núcleo sí son accesibles desde la aplicación, como el gestor de memoria o la carga de materiales y texturas.
 
 \subsection{Ratio de fotogramas por segundo y bucle de ejecución}
 \label{fps_bucle_ejecucion}
 Aunque puede funcionar para la generación de imágenes estáticas, Manta es sobretodo un motor gráfico en tiempo real. Esto significa que su código se ejecuta múltiples veces para generar imágenes distintas y mostrarlas en pantalla, con lo cual se logra una ilusión de movimiento. De manera óptima suele considerarse como estándar los 60 fotogramas por segundo\footfullcite{vsync_nvidia} (FPS o frames en adelante), aunque 24-30 FPS suele considerarse el mínimo aceptable. Debe tenerse en cuenta que aunque estos son los valores habituales, la tolerancia varía según el tipo de aplicación: en nuestro caso aunque buscamos una respuesta fluida, puede llegar a ser aceptable una bajada de los FPS sin afectar gravemente la experiencia de usuario.
 
-Como implicación tenemos que para una buena experiencia en tiempo real todos los aspectos de la aplicación, incluyendo los cálculos de la propia aplicación como del propio motor y el renderizado a través de la GPU, deben calcularse como mínimo en unos $0.04$ segundos y óptimamente en $0.016$ segundos (los mencionados 24 y 60 FPS). En contraste, un render de alta calidad con ray tracing (una técnica que simula la física detrás de la interacción entre la luz y las superficies de un espacio) puede tardar varios minutos u horas\footfullcite{nvidia_raytr}. Es de esperar por tanto que el motor sacrifique gran parte de ese realismo para reducir el tiempo de ejecución.
+Como implicación está que para una buena experiencia en tiempo real todos los aspectos de la aplicación, incluyendo los cálculos de la propia aplicación como del propio motor y el renderizado a través de la GPU, deben calcularse como mínimo en unos $0.04$ segundos y óptimamente en $0.016$ segundos (los mencionados 24 y 60 FPS). En contraste, un render de alta calidad con ray tracing (una técnica que simula la física detrás de la interacción entre la luz y las superficies de un espacio) puede tardar varios minutos u horas\footfullcite{nvidia_raytr}. Es de esperar por tanto que el motor sacrifique gran parte de ese realismo para reducir el tiempo de ejecución.
 
-Para hacer esto de manera indefinida se encapsula todo el código del programa en un bucle de infinito que sólo puede detenerse manualmente y que contiene, en orden:
+Para hacer esto repetidamente de manera indefinida se encapsula todo el código del programa en un bucle de infinito que sólo puede detenerse manualmente y que contiene, en orden:
 
 \begin{itemize}
-    \item El cálculo del tiempo de ejecución del frame: las variaciones de FPS que puedan producirse a lo largo de la ejecución pueden provocar un efecto de aceleración y deceleración que empeora notablemente la experiencia. Además no se puede predecir cual será el ratio de FPS al que se ejecutará la aplicación cuando no conocemos en qué máquina se ejecutará y cual es su potencia. Para evitar este tipo de indeterminación calculamos el tiempo que transcurre entre un frame y el siguiente, el cual puede utilizarse en los cálculos a la hora de actualizar para compensar.
-    \item La actualización de la aplicación: se llama una función desde la cual debemos actualizar la escena en función de los cálculos que realicemos. Cuando la aplicación alcance cierta complejidad, este puede llegar a ser el punto del bucle que absorba una mayor carga de trabajo, por lo que la eficiencia debe ser tenida en cuenta al actualizar para no ralentizar demasiado el programa.
-    \item La actualización de la escena: Como se mencionará en el apartado \ref{scene_hierarchy}, el motor dispone de una colección de elementos que le hemos ordenado mostrar en pantalla. En este apartado se actualiza la escena para que refleje los cambios hechos en el proceso de actualización de la aplicación. Entre otras cosas, en este punto se calculan las transformaciones de las entidades (\ref{entity_component}) y se prepara toda la información que pueda necesitarse para renderizar.
-    \item Renderizado: En este punto se envía toda la información necesaria a la GPU (incluyendo la cámara, las luces y los elementos de la escena) y se le ordena renderizar la escena. Aquí predomina el funcionamiento de la API gráfica, por lo que según la plataforma en que nos encontremos, este paso será realizado por una API diferente (véase el apartado \ref{APIS}).
+    \item El cálculo del tiempo de ejecución del frame: las variaciones de FPS que puedan producirse a lo largo de la ejecución pueden provocar un efecto de aceleración y deceleración que empeora notablemente la experiencia. Además no se puede predecir cual será el ratio de FPS al que se ejecutará la aplicación cuando no conocemos en qué máquina se ejecutará y cual es su potencia. Para evitar este tipo de indeterminación se calcula el tiempo que transcurre entre un frame y el siguiente, el cual puede utilizarse en los cálculos a la hora de actualizar para compensar.
+    \item La actualización de la aplicación: se llama a una función desde la cual debemos actualizar la escena en función de los cálculos que se realicen. Cuando la aplicación alcance cierta complejidad, este puede llegar a ser el punto del bucle que absorba una mayor carga de trabajo, por lo que la eficiencia debe ser tenida en cuenta al actualizar para no ralentizar demasiado el programa.
+    \item La actualización de la escena: Como se mencionará en el apartado \ref{scene_hierarchy}, el motor dispone de una colección de elementos que le hemos ordenado mostrar en pantalla. En este punto se actualiza la escena para que refleje los cambios hechos en el proceso de actualización de la aplicación. Entre otras cosas, se calculan las transformaciones de las entidades (\ref{entity_component}) y se prepara toda la información que pueda necesitarse para renderizar.
+    \item Renderizado: En el momento de renderizar la escena, junto con la orden de renderizado se envía toda la información necesaria a la GPU (incluyendo la cámara, las luces y los elementos de la escena). Aquí predomina el funcionamiento de la API gráfica, por lo que según la plataforma en que nos encontremos, este paso será realizado por una API diferente (véase el apartado \ref{APIS}).
 \end{itemize}
 
 Previamente al bucle se ejecutan las funciones de inicialización tanto del motor como de la aplicación, mientras que al detener la ejecución se libera la memoria reservada (normalmente durante esta primera inicialización).
 
 \begin{figure}[H]
     \centering
-    \includegraphics[scale=0.70]{Bucle}
+    \includegraphics[width=0.8\linewidth]{Bucle}
     \caption{Esquema del bucle de ejecución.}
     \label{fig:bucle}
 \end{figure}
 
-\subsection{Patrón de entidad componente}
+\subsection{Patrón de entidad-componente}
 \label{entity_component}
-En una aplicación 3D, podemos entender como entidad cualquier elemento que se encuentre en la escena. Por lo general todas tienen un elemento en común: tienen una transformación que indica su traslación, rotación y escalado. Sin embargo, cada entidad puede tener propósitos distintos: algunas son luces, otras cámaras, o objetos tridimensionales con malla y material, etc.
+En una aplicación 3D, puede entenderse como entidad cualquier elemento que se encuentre en la escena. Por lo general todas tienen un elemento en común: tienen una transformación que indica su traslación, rotación y escalado. Sin embargo, cada entidad puede tener propósitos distintos: algunas son luces, otras cámaras, o objetos tridimensionales con malla y material, etc.
 
-Dentro de cada categoría pueden haber varios tipos, o tal vez necesitamos que una entidad cumpla unas propiedades determinadas como emitir audio o verse afectada por un motor de físicas; y también podemos querer combinaciones de estas como que un elemento sea una luz y al mismo tiempo se balancee mediante un motor de físicas.
+Dentro de cada categoría pueden haber varios tipos, o tal vez se necesita que una entidad cumpla unas propiedades determinadas como emitir audio o verse afectada por un motor de físicas; y también se podrían querer combinaciones de estas como que un elemento sea una luz y al mismo tiempo se balancee mediante un motor de físicas.
 
-No queremos que nuestro código mezcle cosas tan dispares, tener las físicas y el audio en el mismo sitio resultaría en un código imposible de mantener a largo plazo; por lo que tenemos que buscar un modo de modularizar estas características. Para ello existe el patrón entidad-componente\footfullcite{game_programming_patterns}, que nos permite crear componentes que aglomeran ciertas propiedades y comportamientos. Después podemos añadir cuantos componentes queramos a una entidad, permitiendo hacer que esta cumpla dichas propiedades sin aglomerar todo el código de estas.
+No es deseable que el código mezcle cosas tan dispares, tener las físicas y el audio en el mismo sitio resultaría en un código imposible de mantener a largo plazo; por lo que se precisa buscar un modo de modularizar estas características. Para ello existe el patrón entidad-componente\footfullcite{game_programming_patterns}, que nos permite crear componentes que aglomeran ciertas propiedades y comportamientos. Después podemos añadir cuantos componentes queramos a una entidad, permitiendo hacer que esta cumpla dichas propiedades sin aglomerar todo el código de estas.
 
-Para implementar este patrón tenemos dos clases principales ``Entity" y ``Component", las cuales podremos extender como deseemos para crear distintos tipos de cada una. Una entidad por defecto contiene una lista de componentes, que en el fondo son instancias de los diferentes tipos de componentes que creemos. Component es una clase abstracta y sus clases derivadas deben implementar uno o varios métodos que puedan ser llamados desde la entidad.
+Para implementar este patrón existen dos clases principales: ``Entity" y ``Component" (fig. \ref{fig:entity_component_structure}); las cuales pueden extenderse como se desee (no sólo desde el framework sino también desde la propia aplicación) para crear distintos tipos de cada una. Una entidad por defecto contiene una lista de componentes, que en el fondo son instancias de los diferentes tipos de componentes que creemos. Component es una clase abstracta y sus clases derivadas deben implementar uno o varios métodos que puedan ser llamados desde la entidad.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.75]{entity_component}
+    \caption{Esquema simplificado del patrón entidad-componente.}
+    \label{fig:entity_component_structure}
+\end{figure}
 
 De este modo, cada vez que la entidad necesite delegar una funcionalidad a sus componentes, iterará sobre ellos y llamará dichos métodos, que tendrán un comportamiento distinto según se requiera. En nuestro caso, los métodos que implementa Component son los siguientes:
 
@@ -45,19 +65,19 @@ De este modo, cada vez que la entidad necesite delegar una funcionalidad a sus c
     \item RemovedComponent: Al igual que la anterior, cuando se elimina un componente también se hace saber al resto de componentes aún existentes.
 \end{itemize}
 
-Aunque no lo hemos utilizado, es bastante típico en el patrón Component tener un método ``update" que se llama en cada actualización de la aplicación (\ref{fps_bucle_ejecucion}) y hace que las propias entidades se encarguen de su propio comportamiento en tiempo real, a través de los componentes. Nosotros no hemos implementado esta capacidad porque hemos decidido que sean funciones externas quienes controlen dicho comportamiento, y no las propias entidades.
+Aunque no ha sido utilizado, es bastante típico en el patrón Component tener un método ``update" que se llama en cada actualización de la aplicación (\ref{fps_bucle_ejecucion}) y hace que las propias entidades se encarguen de su propio comportamiento en tiempo real, a través de los componentes. En esta aplicación se ha decidido que sean funciones externas quienes controlen dicho comportamiento, y no las propias entidades.
 
-Para acceder externamente a los compoentes, en la clase Entity hacemos uso de ``templates" de C++, sobre los cuales no vamos a profundizar. Los templates permiten implementar un método independientemente del tipo de las variables con las que trabaja, de modo que este tipo se especifica en el momento de llamar al método. Para pedirle a una entidad que nos dé acceso a un componente específico, le podemos especificar el tipo del componente que queremos y desde el método buscar qué componentes son de dicho tipo.
+Para acceder externamente a los componentes, en la clase Entity se hace uso de ``templates" de C++, sobre los cuales no se profundizará. Los templates permiten implementar un método independientemente del tipo de las variables con las que trabaja, de modo que este tipo se especifica en el momento de llamar al método. Para pedirle a una entidad que un componente específico, se debe especificar el tipo del componente que se desea.
 
 \subsection{Escena, jerarquía y pasos previos al renderizado}
 \label{scene_hierarchy}
-Como se ha mencionado en el apartado \ref{entity_component}, disponemos de una serie de entidades distribuidas por el espacio con una traslación, rotación y escalado. Este espacio se conoce como la escena.
+Como se ha mencionado en el apartado \ref{entity_component}, existen una serie de entidades distribuidas por el espacio con una traslación, rotación y escalado. Este espacio se conoce como la escena.
 
-Al crear una entidad, esta automáticamente se registra a sí misma en la jerarquía de la escena. La jerarquía contiene por tanto un listado con punteros a cada una de las entidades que le permite acceder a sus componentes. El motor trabaja directamente con este listado de objetos y hará directamente todo lo que se requiera con ellos dependiendo de sus componentes. Por lo tanto, el usuario no debe pedir en ningún momento que se rendericen los objetos: basta con crear una entidad que tenga un componente de malla (véase el apartado \ref{mesh_light_cam}) para que el motor entienda que deberá renderizarlo.
+Al crear una entidad, esta automáticamente se registra a sí misma en la jerarquía de la escena. La jerarquía contiene por tanto un listado con punteros a cada una de las entidades que le permite acceder a sus componentes. El motor trabaja directamente con este listado de objetos y hará automáticamente todo lo que se requiera con ellos en función de sus componentes. Por lo tanto, el usuario no debe pedir en ningún momento que se rendericen los objetos: basta con crear una entidad que tenga un componente de malla (véase el apartado \ref{mesh_light_cam}) para que el motor entienda que deberá renderizarlo.
 
-Las entidades están organizadas en la jerarquía de tal modo que una entidad puede ser padre de otras entidades, formando una estructura de árbol. Las transformaciones de las entidades se acumulan desde la raíz de la jerarquía hacia abajo, es decir: si una entidad está desplazada o rotada, sus entidades ``hijas" tendrán una traslación y rotación respecto a la primera. Esto permite crear diferentes estructuras dentro de la escena y trabajar con estas sin tener que controlar la posición de todos los elementos que la componen. Por ejemplo: si tenemos una entidad ``coche" y otra entidad ``asientos" asignar el primero como padre de los segundos hará que se mantengan en su sitio, pegados a la estructura del coche, dado que su transformación es relativa a este.
+Las entidades están organizadas en la jerarquía de tal modo que una entidad puede ser padre de otras entidades, formando una estructura de árbol. Las transformaciones de las entidades se acumulan desde la raíz de la jerarquía hacia abajo, es decir: si una entidad está desplazada o rotada, sus entidades ``hijas" tendrán una traslación y rotación respecto a la primera. Esto permite crear diferentes estructuras dentro de la escena y trabajar con estas sin tener que controlar la posición de todos los elementos que la componen. Por ejemplo: dada una entidad ``coche" y otra entidad ``asientos" asignar el primero como padre de los segundos hará que se mantengan en su sitio, pegados a la estructura del coche, dado que su transformación es relativa a este.
 
-Una consecuencia de este sistema es que las transformaciones que tenemos en cada entidad no son realmente la transformación respecto al centro de la escena, que es la que necesitamos en el momento de renderizar. Por lo tanto debemos realizar un cálculo previo al renderizado que consiste en multiplicar las transformaciones en cada una de las ramas de la escena y asignarlas a cada uno de los elementos.
+Una consecuencia de este sistema es que las transformaciones que hay en cada entidad no son realmente la transformación respecto al centro de la escena, que es la que necesitamos en el momento de renderizar. Por lo se debe realizar un cálculo previo al renderizado que consiste en multiplicar de forma acumulativa las transformaciones en cada una de las ramas de la escena y asignarlas a cada uno de los elementos.
 
 \subsection{Mallas, luces y cámara}
 \label{mesh_light_cam}
