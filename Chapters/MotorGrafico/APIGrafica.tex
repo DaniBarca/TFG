@@ -1,17 +1,45 @@
 \section{APIs gráficas}
 \label{APIS}
 
-Según la plataforma en que se esté ejecutando la aplicación, se hará uso de una API gráfica u otra. Por defecto Manta ha sido desarrollado para funcionar en escritorio haciendo uso de Vulkan, pero esta API no está disponible en web, por lo que tendremos que utilizar OpenGL ES 2 y WebGL en este caso.
+Según la plataforma en que se esté ejecutando la aplicación, se hará uso de una API gráfica u otra. Por defecto Manta ha sido desarrollado para funcionar en escritorio haciendo uso de Vulkan, pero esta API no está disponible en web, por lo que tendremos que utilizar OpenGL ES 2 y WebGL en este caso. Con este capítulo se pretende mostrar una vista general y con poco detalle de las APIs gráficas consideradas para hacer funcionar el motor en cada plataforma.
 
 \subsection{Vulkan}
+\label{vulkan_api}
 Entre las diferentes APIs gráficas que existen, la tendencia actual es la de dar cada vez más control al desarrollador sobre lo que ocurre entre la aplicación y la gráfica, dando acceso de bajo nivel al hardware. Vulkan es la respuesta de software libre a esta tendencia, y una de las APIs que más tracción está recogiendo últimamente.
 
 Al ofrecer control de bajo nivel, con Vulkan pueden realizarse muchas optimizaciones que en una API de alto nivel no sería posible realizar\footfullcite{vulkan_spec}. Vulkan facilita el uso de múltiples dispositivos de hardware con diversos propósitos (la GPU puede utilizarse también para realizar cálculos en paralelo, sin estar necesariamente renderizando) y el uso de multithreading.
 
 Para ello Vulkan puede detectar y listar los dispositivos de hardware que se encuentran disponibles en la máquina, así como sus capacidades y especificaciones. Por cada dispositivo se crea una cola de comandos, que describen las acciones a realizar por el hardware.
 
-Los comandos pueden tener distintos estados que permiten controlar el flujo de la aplicación, especialmente en aplicaciones multinúcleo.
+Los comandos pueden tener distintos estados que permiten controlar el flujo de la aplicación, especialmente en aplicaciones multinúcleo. Dicho estado indica si el comando se ha ejecutado, está a la espera de ejecutarse o está disponible para ser ejecutado de nuevo. Por supuesto, la pipeline gráfica se ejecuta a través de dichos comandos.
+
+En cuanto a la gestión de memoria, Vulkan asigna dos tipos de memoria al dispositivo: una mayor cantidad para los elementos con los que ha de trabajar constantemente, que cambiará lo mínimo posible, y que es inaccesible desde fuera del dispositivo; y otra menor conocida como ``staging" que permite hacer una copia de fragmentos de la memoria principal y modificarlos desde el exterior, para subirlos de nuevo a la principal posteriormente. Este paso se realiza porque es muy ineficiente que un dispositivo acceda a la memoria de la CPU y vice-versa, tanto la GPU como la CPU deben trabajar con su propia memoria y reducir al mínimo la transmisión de datos.
+
+Al contrario que otras APIs, en Vulkan es posible utilizar multithreading. En caso de utilizarse, esto implica la necesidad de controlar la sincronía de cuanto ocurre en la aplicación, pero resulta una gran ventaja si se está dispuesto a realizar el esfuerzo, y supone un mucho mejor aprovechamiento de la CPU teniendo en cuenta que cada vez tienen más núcleos de procesador.
+
+Como puede verse, en Vulkan la aplicación es responsable de la mayor parte de gestión en cuanto a qué debe hacer el dispositivo en cada momento. Es algo que contrasta, como se ha dicho, con la tendencia que ha existido hasta el momento de abstraer los elementos descritos en este apartado. 
+
+Aunque a priori el tener más control resulta beneficioso, se debe tener especial cuidado pues la dificultad de hacer funcionar Vulkan es muy superior que con otras APIs (como OpenGL en el apartado \ref{opengl_webgl_api}), llegando al extremo en que una mala implementación en Vulkan puede dar peores resultados que su equivalente en alternativas que habrían sido mucho más simples de implementar.
 
 \subsection{OpenGL ES 2 y WebGL}
+\label{opengl_webgl_api}
+En estos momentos en las tecnologías web, WebGL es la única API 3D estándar y por lo tanto que vale la pena considerar. Por eso Vulkan sólo se va a utilizar en escritorio. En el capítulo \ref{emscripten_gapi} se explicará como hacer que una aplicación programada con Vulkan pueda trabajar con WebGL al cambiar a la plataforma web.
 
-\subsection{Otras APIs actuales}
+OpenGL nació en 1992 como alternativa a las APIs gráficas propietarias del momento. La especificación y estandarización hicieron que se popularizara hasta ser la API gráfica más popular \footfullcite{opengl_hist}. OpenGL ES es una versión de OpenGL para dispositivos embebidos.
+
+WebGL apareció de la necesidad de tener un estándar de aceleración gráfica dentro de las tecnologías web. Hasta el momento las alternativas pasaban por el uso de plugins como Adobe Flash\footfullcite{stage3D_flash}. Está basado en OpenGL ES 2 y su especificación es prácticamente idéntica, de ahí que resulte relativamente sencillo convertir llamadas a OpenGL en llamadas a WebGL.
+
+Al contrario de lo que ocurría con Vulkan en el apartado \ref{vulkan_api}, OpenGL está pensado para proporcionar la mayor sencillez de uso posible, en detrimento del control que posee el desarrollador sobre lo que ocurre a bajo nivel. En OpenGL no es necesario especificar qué dispositivo utilizar (de hecho es prácticamente imposible escoger el dispositivo, lo cual puede ser una desventaja), gestionar la memoria, o manejar los comandos ejecutados por el dispositivo.
+
+Aunque técnicamente es posible hacer programas con múltiples hilos de ejecución con OpenGL, hacerlo no supone ninguna mejora en términos de eficiencia y supone un esfuerzo fútil\footfullcite{opengl_multithreading}. En cualquier caso, la imposibilidad de usar hilos de ejecución en Javascript hace que no podamos aprovechar multithreading de ningún modo con WebGL (véase el apartado \ref{init_emscripten} donde se explican, entre otras cosas, algunas características de Javascript).
+
+El resultado es una mayor rapidez de desarrollo y un código mucho más ligero y sencillo de estructurar en comparación con Vulkan, en consecuencia más fácil de mantener. A pesar de sus limitaciones, por lo general es suficiente para la mayoría de aplicaciones 3D. Para aplicaciones en las cuales el rendimiento sea crítico, sus limitaciones pueden llegar a ser un problema, o al menos una desventaja importante.
+
+\subsection{Otras plataformas}
+Aunque en este documento sólo se profundiza en el desarrollo para escritorio y web, en el futuro se espera poder exportar a otras plataformas como sistemas operativos móviles. En este área hay algunas diferencias entre los diferentes proveedores de dispositivos móviles.
+
+A día de hoy, dispositivos con iOS de Apple son compatibles con las versiones de OpenGL ``OpenGL ES 1.1", ``OpenGL ES 2.0" y ``OpenGL ES 3.0" \footfullcite{apple_dev_opengl} mientras que en Android de Google se acepta ``OpenGL ES 1.0", ``OpenGL ES 2.0", ``OpenGL ES 3.0" y ``OpenGL ES 3.1" \footfullcite{google_dev_opengl}. Cada versión de OpenGL tiene ciertas características que mejoran a la anterior aunque hacer uso de estas suele dar problemas de incompatibilidad con las anteriores (las versiones previas de cada sistema operativo puede tener menos versiones de OpenGL compatibles).
+
+Android dispone de una versión de Vulkan pensada especialmente para dispositivos móviles\footfullcite{android_vulkan}, por lo que la exportación de código a Android debería ser relativamente directa. iOS en cambio dispone de su propia API para gráficos de bajo nivel: Metal. Metal comparte gran parte de la filosofía de Vulkan, pero realizar la exportación podría implicar bastante más esfuerzo. No hay expectativas de que Apple incluya soporte a Vulkan dentro de iOS a corto plazo.
+
+Microsoft también cuenta con su propia API gráfica, DirectX, aunque los dispositivos móviles con Windows representan hoy en día una parte marginal del mercado, y es poco probable que valga la pena el esfuerzo de portar el código. Al igual que Vulkan y Metal, DirectX tiene un planteamiento de bajo nivel, aunque su trayectoria es mucho más larga que los dos primeros (su primera versión data de 1995), y sus versiones anteriores no contaban con esta filosofía. DirectX tiene una mayor compatibilidad con dispositivos de escritorio que Vulkan, por lo que podría llegar a ser necesario portar el código a DirectX si en algún momento se requiere ejecutar en un dispositivo Windows que no acepte Vulkan (algunos clientes usan dispositivos muy específicos).

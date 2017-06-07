@@ -32,6 +32,7 @@ Es importante también tener en cuenta algunos de los defectos de utilizar Emscr
 \end{itemize}
 
 \subsection{Adaptación de la API gráfica}
+\label{emscripten_gapi}
 Como se ha podido ver en el apartado \ref{APIS}, el motor está pensado para funcionar utilizando la API gráfica Vulkan. El primer paso para hacer funcionar el programa con Emscripten ha sido utilizar una API gráfica que sea compatible con las tecnologías web.
 
 WebGL está basado en OpenGL ES 2, y Emscripten puede reconocer las llamadas a esta segunda API y transformarlas en llamadas a WebGL. De modo que para hacer funcionar el motor ``bastará" con buscar los puntos donde se interactúe con la API de Vulkan y cambiarlos para que funcionen con OpenGL ES 2.

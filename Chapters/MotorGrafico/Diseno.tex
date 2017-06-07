@@ -117,14 +117,14 @@ El material de un objeto 3D describe el aspecto que ha de tener la superficie de
 Las texturas que forman el material pueden ser un color único (que equivale a aplicar una textura de ese color o una imagen importada desde un fichero. El material está formado por los siguientes tipos de texturas o mapas:
 
 \begin{itemize}
-    \item Albedo: En el terreno de la física, el albedo es la cantidad de luz que rebota sobre una superficie tras incidir sobre esta\cite{def_albedo}. En nuestro caso podemos entenderlo como la textura que expresa el color que ha de tener la superficie en cada punto.
+    \item Albedo: En el terreno de la física, el albedo es la cantidad de luz que rebota sobre una superficie tras incidir sobre esta\cite{def_albedo}. Puede entenderse como la textura que expresa el color que ha de tener la superficie en cada punto.
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.4\linewidth]{material_example/albedo_example}
         \caption{Ejemplo de Albedo\cite{free_pbr}.}
         \label{fig:albedo_ex}
     \end{figure}
-    \item Mapa de normales: Habitualmente, la normal de la superficie se expresa a partir de la propia geometría de esta, pero a veces queremos ciertos detalles que requerirían aumentar mucho la resolución de la malla, aumentando con ello también el peso del modelo 3D y el coste computacional de procesar y renderizar dicha información. Para evitar esto podemos utilizar una textura de normales: en cada píxel, a la normal de la superficie que hemos interpolado a partir de los vértices próximos, le sumamos la normal correspondiente extraída del mapa de normales. Esto permite crear un efecto de profundidad o rugosidad sin modificar la geometría del objeto.
+    \item Mapa de normales: Habitualmente, la normal de la superficie se expresa a partir de la propia geometría de esta, pero a veces se necesitan ciertos detalles que requerirían aumentar mucho la resolución de la malla, aumentando con ello también el peso del modelo 3D y el coste computacional de procesar y renderizar dicha información. Para evitar esto se puede utilizar una textura de normales: en cada píxel, a la normal de la superficie interpolada a partir de los vértices próximos, le sumamos la normal correspondiente extraída del mapa de normales. Esto permite crear un efecto de profundidad o rugosidad sin modificar la geometría del objeto.
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.4\linewidth]{material_example/normal_map_example}
@@ -154,10 +154,21 @@ Las texturas que forman el material pueden ser un color único (que equivale a a
 \label{engine_memory}
 Una de las operaciones que más tiempo demandan en C++ es solicitar nueva memoria al sistema operativo. Debido a eso, abusar de las asignaciones de memoria, por ejemplo haciéndolas dentro de bucles (como el bucle de Manta), puede hacer que el programa se ralentice considerablemente.
 
-Para minimizar la cantidad de asignaciones que realizamos, manta tiene un único ``bloque de memoria" (más conocido como memory pool). El memory pool asigna una gran cantidad de memoria al inicializar el programa y nos da acceso a esta cada vez que lo necesitemos. En caso de no necesitar más dicha memoria, podemos solicitar al memory pool que la libere, dejándola disponible en adelante. Hacer esto es computacionalmente gratuito, de modo que no necesitamos preocuparnos de las asignaciones que necesitemos hacer.
+Para minimizar la cantidad de asignaciones que realizamos, manta tiene un único ``bloque de memoria" (más conocido como Memory Pool). El Memory Pool asigna una gran cantidad de memoria al inicializar el programa y nos da acceso a esta cada vez que lo necesitemos. Hacer esto es muy barato computacionalmente, de modo que no necesitamos preocuparnos de las asignaciones que necesitemos hacer.
+
+Dada la cantidad de memoria que se necesita para una variable, el Memory Pool automáticamente busca una región del bloque no esté siendo utilizada en ese momento y devuelve un puntero a esa región, marcándola como ``usada" desde ese momento. Cuando la variable deje de ser necesaria, podemos liberarla para futuras operaciones. Eso provoca que a lo largo de la ejecución puedan quedar pequeños fragmentos de memoria sin utilizar, que no siempre serán útiles para nuevos usos; algunas implementaciones de Memory Pool pueden reorganizar la memoria utilizada para evitar que queden estos fragmentos, pero hacerlo tiene un mayor coste computacional e impide que el programador trabaje directamente con punteros al bloque de memoria (dado que al reorganizar dichos punteros dejarían de ser válidos), obligando a usar sistemas más complicados de punteros.
 
 Sin embargo, existen dos desventajas importantes:
 
 Por un lado necesitamos saber desde el principio cuánta memoria podemos llegar a necesitar dado que esta solo se va a asignar una vez; en caso de superar ese límite de memoria tendremos un error de segmentación que detendrá el programa.
 
-Por otro lado, también necesitamos tener mucho más cuidado con la memoria que solicitemos al memory pool: si nos equivocamos al manejar la memoria asignada, C++ suele responder con un error de segmentación; pero si hacemos lo mismo con la memoria del memory pool, ese error no se producirá y estaremos modificando datos que corresponden a otras variables. Al fin y al cabo, el puntero que recibimos apunta a una posición desconocida del memory pool, y nada nos impide desplazarnos por este sin tener en cuenta el tamaño de la memoria que nos ha asignado.
+Por otro lado, también necesitamos tener mucho más cuidado con la memoria que solicitemos al Memory Pool: si nos equivocamos al manejar la memoria asignada, C++ suele responder con un error de segmentación; pero si hacemos lo mismo con la memoria del Memory Pool, ese error no se producirá y estaremos modificando datos que corresponden a otras variables. Al fin y al cabo, el puntero que recibimos apunta a una posición desconocida del Memory Pool, y nada nos impide desplazarnos por este sin tener en cuenta el tamaño de la memoria que nos ha asignado.
+
+En la figura \ref{fig:memory_pool} se puede ver un ejemplo de como podría quedar la memoria en mitad de una ejecución mientras se solicita un bloque del tamaño de un float. Cada cuadrado representa un byte de información.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{MemoryPool}
+    \caption{Ejemplo de una posible distribución del Memory Pool durante una ejecución.}
+    \label{fig:memory_pool}
+\end{figure}
