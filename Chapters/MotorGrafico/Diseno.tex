@@ -19,7 +19,7 @@ Otros elementos más sencillos del núcleo sí son accesibles desde la aplicaci�
 \label{fps_bucle_ejecucion}
 Aunque puede funcionar para la generación de imágenes estáticas, Manta es sobretodo un motor gráfico en tiempo real. Esto significa que su código se ejecuta múltiples veces para generar imágenes distintas y mostrarlas en pantalla, con lo cual se logra una ilusión de movimiento. De manera óptima suele considerarse como estándar los 60 fotogramas por segundo\footfullcite{vsync_nvidia} (FPS o frames en adelante), aunque 24-30 FPS suele considerarse el mínimo aceptable. Debe tenerse en cuenta que aunque estos son los valores habituales, la tolerancia varía según el tipo de aplicación: en nuestro caso aunque buscamos una respuesta fluida, puede llegar a ser aceptable una bajada de los FPS sin afectar gravemente la experiencia de usuario.
 
-Como implicación está que para una buena experiencia en tiempo real todos los aspectos de la aplicación, incluyendo los cálculos de la propia aplicación como del propio motor y el renderizado a través de la GPU, deben calcularse como mínimo en unos $0.04$ segundos y óptimamente en $0.016$ segundos (los mencionados 24 y 60 FPS). En contraste, un render de alta calidad con ray tracing (una técnica que simula la física detrás de la interacción entre la luz y las superficies de un espacio) puede tardar varios minutos u horas\footfullcite{nvidia_raytr}. Es de esperar por tanto que el motor sacrifique gran parte de ese realismo para reducir el tiempo de ejecución.
+Como implicación está que para una buena experiencia en tiempo real todos los aspectos de la aplicación, incluyendo los cálculos de la propia aplicación como del propio motor y el renderizado a través de la GPU, deben calcularse como mínimo en unos 40 milisegundos segundos y óptimamente en 16 milisegundos (los mencionados 24 y 60 FPS). En contraste, un render de alta calidad con ray tracing (una técnica que simula la física detrás de la interacción entre la luz y las superficies de un espacio) puede tardar varios minutos u horas\footfullcite{nvidia_raytr}. Es de esperar por tanto que el motor sacrifique gran parte de ese realismo para reducir el tiempo de ejecución.
 
 Para hacer esto repetidamente de manera indefinida se encapsula todo el código del programa en un bucle de infinito que sólo puede detenerse manualmente y que contiene, en orden:
 
@@ -77,7 +77,9 @@ Al crear una entidad, esta automáticamente se registra a sí misma en la jerarq
 
 Las entidades están organizadas en la jerarquía de tal modo que una entidad puede ser padre de otras entidades, formando una estructura de árbol. Las transformaciones de las entidades se acumulan desde la raíz de la jerarquía hacia abajo, es decir: si una entidad está desplazada o rotada, sus entidades ``hijas" tendrán una traslación y rotación respecto a la primera. Esto permite crear diferentes estructuras dentro de la escena y trabajar con estas sin tener que controlar la posición de todos los elementos que la componen. Por ejemplo: dada una entidad ``coche" y otra entidad ``asientos" asignar el primero como padre de los segundos hará que se mantengan en su sitio, pegados a la estructura del coche, dado que su transformación es relativa a este.
 
-Una consecuencia de este sistema es que las transformaciones que hay en cada entidad no son realmente la transformación respecto al centro de la escena, que es la que necesitamos en el momento de renderizar. Por lo se debe realizar un cálculo previo al renderizado que consiste en multiplicar de forma acumulativa las transformaciones en cada una de las ramas de la escena y asignarlas a cada uno de los elementos.
+Una consecuencia de este sistema es que las transformaciones que hay en cada entidad no son realmente la transformación respecto al centro de la escena, que es la que necesitamos en el momento de renderizar. Por lo que se debe realizar un cálculo previo al renderizado que consiste en multiplicar de forma acumulativa las transformaciones en cada una de las ramas de la escena y asignarlas a cada uno de los elementos.
+
+Aunque desde fuera la información se nos presente de en forma de árbol, internamente los datos están estructurados en arrays. El objetivo de esta estructura es mejorar la eficiencia del código (haciendo uso de conceptos como Data Oriented Design o SIMD, sobre los que no se profundizará en este documento pero pueden ser una buena lectura complementaria) sin sacrificar usabilidad.
 
 \subsection{Mallas, luces y cámara}
 \label{mesh_light_cam}
@@ -100,7 +102,7 @@ La cámara indica el punto de vista desde el que se realizará el renderizado de
 
 \begin{itemize}
     \item Cámara ortogonal: se caracteriza por mostrar todos los elementos con la misma escala, sin importar la distancia en que estén. Es especialmente útil para comparar tamaños de distintos elementos, y la utilizaremos para vistas superior y frontales de la habitación, pensados como modos de edición de esta. Sus propiedades son el tamaño, en alto y ancho, de su campo de visión.
-    \item Cámara en perspectiva: imita el modo en que vemos los objetos en la realidad, teniendo en cuenta la distancia en que se encuentran. Da resultados mucho más satisfactorios para visualizar la habitación, y transmite más información espacial. Sus propiedades son el ángulo de su campo de visión, más conocido como FOV (field of view), y los planos cercano y lejano de este, comúnmente conocidos como near plane y far plane.
+    \item Cámara en perspectiva: imita el modo en que vemos los objetos en la realidad, teniendo en cuenta la distancia en que se encuentran. Da resultados mucho más satisfactorios para visualizar la habitación, y transmite más información espacial. Sus propiedades son el ángulo de su campo de visión, más conocido como FOV (field of view), y los planos cercano y lejano de este, comúnmente conocidos como ``near plane" y ``far plane".
 \end{itemize}
 
 \begin{figure}[H]
@@ -154,9 +156,9 @@ Las texturas que forman el material pueden ser un color único (que equivale a a
 \label{engine_memory}
 Una de las operaciones que más tiempo demandan en C++ es solicitar nueva memoria al sistema operativo. Debido a eso, abusar de las asignaciones de memoria, por ejemplo haciéndolas dentro de bucles (como el bucle de Manta), puede hacer que el programa se ralentice considerablemente.
 
-Para minimizar la cantidad de asignaciones que realizamos, manta tiene un único ``bloque de memoria" (más conocido como Memory Pool). El Memory Pool asigna una gran cantidad de memoria al inicializar el programa y nos da acceso a esta cada vez que lo necesitemos. Hacer esto es muy barato computacionalmente, de modo que no necesitamos preocuparnos de las asignaciones que necesitemos hacer.
+Para minimizar la cantidad de asignaciones que realizamos, manta tiene un único ``bloque de memoria" (más conocido como Memory Pool). El Memory Pool asigna una gran cantidad de memoria al inicializar el programa y nos da acceso a esta cada vez que lo necesitemos. Hacer esto es más barato computacionalmente, de modo que no necesitamos preocuparnos de las asignaciones que necesitemos hacer. También nos proporciona un tiempo constante de reserva y liberación de memoria.
 
-Dada la cantidad de memoria que se necesita para una variable, el Memory Pool automáticamente busca una región del bloque no esté siendo utilizada en ese momento y devuelve un puntero a esa región, marcándola como ``usada" desde ese momento. Cuando la variable deje de ser necesaria, podemos liberarla para futuras operaciones. Eso provoca que a lo largo de la ejecución puedan quedar pequeños fragmentos de memoria sin utilizar, que no siempre serán útiles para nuevos usos; algunas implementaciones de Memory Pool pueden reorganizar la memoria utilizada para evitar que queden estos fragmentos, pero hacerlo tiene un mayor coste computacional e impide que el programador trabaje directamente con punteros al bloque de memoria (dado que al reorganizar dichos punteros dejarían de ser válidos), obligando a usar sistemas más complicados de punteros.
+Dada la cantidad de memoria que se necesita para una variable, el Memory Pool automáticamente busca una región del bloque no esté siendo utilizada en ese momento y devuelve un puntero a esa región, marcándola como ``usada" desde ese momento. Cuando la variable deje de ser necesaria, podemos liberarla para futuras operaciones. Eso provoca que a lo largo de la ejecución puedan quedar pequeños fragmentos del bloque de memoria sin utilizar, que no siempre serán útiles para nuevos usos; algunas implementaciones de Memory Pool pueden reorganizar la memoria utilizada para evitar que queden estos fragmentos, pero hacerlo tiene un mayor coste computacional e impide que el programador trabaje directamente con punteros al bloque de memoria (dado que al reorganizar dichos punteros dejarían de ser válidos), obligando a usar sistemas más complicados de punteros.
 
 Sin embargo, existen dos desventajas importantes:
 
@@ -172,3 +174,11 @@ En la figura \ref{fig:memory_pool} se puede ver un ejemplo de como podría queda
     \caption{Ejemplo de una posible distribución del Memory Pool durante una ejecución.}
     \label{fig:memory_pool}
 \end{figure}
+
+\subsection{Gestión de identificadores}
+\label{manta_id_management}
+Entender como funcionan los identificadores en el motor Manta será un detalle importante en algunos puntos de este documento. Cada vez que se ordena a la API gráfica cargar un asset, esta devuelve un identificador que permite indicar posteriormente lo que se quiere hacer con los datos cargados en memoria. Sin embargo, este identificador no es el que se obtiene desde fuera del motor.
+
+Manta crea una capa de abstracción por encima de los identificadores de la API gráfica, para evitar que sean manipulados desde fuera del motor. Desde Manta se espera tener constancia del estado de todos los assets por lo dar el identificador que proporciona la API gráfica permitiría al programador realizar ciertos ``hacks" que harían que Manta perdiera el rastro de los assets.
+
+Por otro lado, generar los propios identificadores de Manta permite mantener la consistencia entre diferentes APIs gráficas y otros elementos del motor. No sólo se busca impedir al programador manipular la API gráfica sino que también se espera que no sea necesario en ningún caso y el mantener esta consistencia hace más sencillo trabajar con el motor.
