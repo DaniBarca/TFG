@@ -1,0 +1,30 @@
+\clearpage
+\section{Interacción}
+En este apartado se darán algunos detalles sobre cómo se ha solucionado la interacción del usuario con la aplicación.
+
+\subsection{Gestión de los inputs y uso del Patrón Estado}
+El motor gráfico Manta tiene una interfaz para configurar los inputs. Se puede definir la función que debe llamarse cuando se da un evento de input determinado.
+
+Como se ha explicado en el capítulo \ref{app_design}, los inputs se redirigen al estado de la aplicación que esté activo en ese momento a través de \texttt{World}. Durante el desarrollo los estados utilizados han sido: \texttt{StandardView}, \texttt{OverView} y \texttt{LateralView}. Podrían definirse más estado en futuros desarrollos.
+
+El estado más complejo de estos es \texttt{OverView}, desde el cual puede modificarse la estancia. Las paredes pueden moverse arrastrando una pared en sí o su esquina, en ambos casos afectando también a las paredes que estén conectadas.
+
+Al hacer click, el método \texttt{OnMouseClick} se llama con la posición del click como parámetro. Para saber en que elemento se ha hecho click, los vértices de cada una de las paredes se transforman a coordenadas de pantalla usando las matrices de vista y perspectiva de la cámara. Los vértices superiores de la pared forman un rectángulo en dos dimensiones que puede compararse con la posición del ratón. A su vez, calculando la distancia entre la posición del ratón y la de los vértices en las esquinas puede saberse si se ha clickado en una esquina. Una vez detectado el elemento con el que se está interactuando se guarda su identificador en el estado, y un booleano que indica que el ratón se está manteniendo pulsado.
+
+Mientras el booleano siga activado, el método \texttt{OnMouseMove} del estado mandará la posición del ratón y el elemento seleccionado al framework de la aplicación (véase el apartado \ref{engine_design}), que procesará el modo en que reaccionan los elementos de la escena a la interacción. La respuesta del framework a ese proceso se utilizará para regenerar las paredes.
+
+Para permitir que esto ocurra en tiempo real se utilizarán comandos, como se explica en el apartado \ref{use_of_command}.
+
+\subsection{Uso del Patrón Comando}
+\label{use_of_command}
+El Patrón Comando, explicado en el apartado \ref{command_pattern}, permite definir distintas acciones y contra-acciones para la aplicación.
+
+Toda la interacción con el gestor de paredes y huecos se ha realizado a través de comandos. Por lo tanto, la aplicación permite hacer y deshacer acciones como mover, añadir o eliminar paredes y huecos.
+
+Un defecto del Patrón Comando es que requiere crear una instancia cada vez que se realiza un comando. Esto puede ser un problema cuando estamos interactuando con el programa de forma constante, como por ejemplo moviendo una pared con el ratón. No es viable crear una instancia de un Comando cada vez que el ratón se mueve un píxel en la pantalla, y además no tiene sentido poder deshacer una acción si esta se ha realizado un gran número de veces para mover un poco algún elemento.
+
+Para solucionarlo, se ha añadido el métodoi \texttt{Update} sólo a los comandos que requerían una actualización constante durante un tiempo determinado. La instancia del comando se crea con la información del elemento a modificar, y guardando el estado previo, pero la acción en sí se realiza con el método \texttt{Update} en vez de \texttt{Do}. Al llamar a \texttt{Update} no se guarda la acción en el historial, por lo que podemos realizarla todas las veces que sea necesario; cuando la acción termine (normalmente, cuando el usuario suelte el ratón), se llama al método \texttt{Do} para que la acción quede registrada.
+
+Con este sistema se registra una sola acción para algo que realmente se ha hecho muchas veces en un período de tiempo. Si se deshace la acción se volverá al estado previo a empezar la acción.
+
+Otros casos como añadir y eliminar elementos no han necesitado esta complejidad añadida.

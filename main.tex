@@ -16,8 +16,6 @@
 \usepackage{times}
 \pagestyle{plain}
 
-\renewcommand{\contentsname}{Indice}
-
 \usepackage{titlesec}
 \titleformat{\chapter}
   {\normalfont\Huge\bfseries}{\thechapter}{1em}{}
@@ -66,6 +64,7 @@
 \end{titlepage}
 
 \cleardoublepage
+\renewcommand{\contentsname}{Índice}
 \tableofcontents
 
 \cleardoublepage
@@ -74,6 +73,10 @@ En este documento se recoge el proceso de desarrollo de una aplicación 3D multi
 
 This document describes the process of developing a 3D multiplatform application for the company Interiorvista, that allows users to configure and visualize rooms with the C++ programming language given some initial requirements. Using Emscripten, the code has been adapted to the limitations of web platforms that are not found in traditional desktop applications, such as the existence of only one single execution thread or the absence of a file system. The company's graphics engine must also be adapted in order to work using WebGL or Vulkan depending on the platform where it's running. In addition, this document discusses details about the software design and the development process of the application itself.
 \end{abstract}
+
+\cleardoublepage
+\renewcommand{\listfigurename}{Lista de Figuras}
+\listoffigures
 
 \cleardoublepage
 \pagenumbering{arabic}
@@ -99,18 +102,16 @@ This document describes the process of developing a 3D multiplatform application
 
 \cleardoublepage
 \chapter{Desarrollo}
-\input{Chapters/Desarrollo/Paredes_y_agujeros}
+\input{Chapters/Development}
 
 \cleardoublepage
 \chapter{Conclusiones}
+\input{Chapters/Conclusiones}
 
 \cleardoublepage
 \appendix
 \chapter{Utilidades matemáticas}
-\input{Chapters/Appendix_Math_Utils}
-
-\chapter{Patrones de diseño}
-\input{Chapters/Appendix_Patterns}
+\input{Chapters/Appendix/Appendix_Math_Utils}
 
 %\bibliographystyle{unsrt}
 %\bibliography{Bibliography}

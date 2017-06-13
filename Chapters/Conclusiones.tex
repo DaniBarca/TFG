@@ -1,0 +1,22 @@
+\section{Estado actual del desarrollo}
+En la versión actual de la aplicación ya es posible generar y visualizar habitaciones, así como interactuar con ellas. También se puede cambiar entre los diferentes estados y hacer y deshacer acciones.
+
+Para el desarrollo de la interfaz en la versión actual de la aplicación se ha hecho uso de la librería ImGui\footfullcite{imgui}. Se trata de una API que permite añadir diversos tipos de elementos de interfaz en la aplicación. Aunque es muy fácil de utilizar y versátil, probablemente será insuficiente de cara a la versión en producción de la aplicación: ImGui está altamente enfocado a interfaces de debugging y los requisitos estéticos de los planificadores no podrán cumplirse fácilmente. Será necesario buscar alternativas.
+
+\section{Futuras iteraciones}
+La adición de elementos interiores e interacción con estos no está terminada, aunque ya se sabe cómo se van a organizar estos elementos (véase el apartado \ref{managers}). Tampoco está hecha la interfaz de usuario y los inputs deben pulirse. Estas serán las prioridades en el futuro inmediato.
+
+A más largo plazo, se deben implementar las diferentes aplicaciones que van a hacer uso del planificador. Se requerirá hacer aplicaciones con múltiples habitaciones y elementos estructurales como posiblemente zonas exteriores (balcones, terrazas o jardines). El planteamiento de diseñar el planificador para ser genérico hará que esto se pueda hacer con relativamente poco esfuerzo.
+
+Es probable que, una vez conocidos los problemas que se han encontrado a lo largo del desarrollo, se de otra iteración a algunos fragmentos del código, para mejorar la eficiencia y la estructura del propio código. Algunos fragmentos del código se han desarrollado con prisa y asumiendo una cierta deuda técnica. Sin embargo, el diseño modular de la aplicación hace que sea posible realizar estas iteraciones trabajando con fragmentos aislados de código.
+
+En su conjunto, la mantenibilidad del código es bastante buena y deberían poder incorporarse nuevos desarrolladores sin excesivo esfuerzo. Algunos fragmentos de código, en cambio, requieren un conocimiento más profundo del problema y de los elementos que intervienen en la solución. Un desarrollador descuidado podría llegar a tener problemas con dichos fragmentos por lo que existe margen de mejora en este aspecto.
+
+\section{Uso de Emscripten como herramienta de desarrollo}
+Al comenzar el desarrollo existía cierto escepticismo sobre las posibilidades de Emscripten. Llevar código de lenguajes de escritorio a plataformas web hasta hace poco ha sido algo muy poco común. Sin embargo, las primeras pruebas con el lenguaje resultaron muy sorprendentes.
+
+Emscripten es una herramienta muy completa, y es perfectamente apto para el desarrollo de aplicaciones web y la puesta en producción de estas, incluso para aplicaciones en 3D. Es emocionante imaginar lo que será posible con la inminente aparición de nuevas herramientas como \texttt{WebAssembly}, que podrían acelerar considerablemente las aplicaciones.
+
+El hecho de haber podido desarrollar la aplicación en C++ hará que en el futuro sea mucho más sencillo adaptarla a otras plataformas como dispositivos móviles. Las APIs de Android e iOS parecen más sencillas de adaptar para que funcionen con C++ de lo que ha sido Emscripten, por lo que aunque es de esperar que surjan dificultades, la previsión al respecto es bastante esperanzadora.
+
+Sin embargo, es poco probable que Emscripten sea la mejor alternativa para todas las situaciones. Hay que recordar que Javascript también puede trasladarse a otras plataformas mediante wrappers. El resultado de hacer esto es mucho menos eficiente pero es más sencillo y la eficiencia no siempre es tan crítica. El punto más complicado en la adaptación del código con Emscripten ha sido la gestión de la asincronía al cargar ficheros.

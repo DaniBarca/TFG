@@ -1,0 +1,100 @@
+Normalmente un motor gráfico incluye una serie de herramientas para facilitar el desarrollo, pero debido algunas carencias del motor Manta en este aspecto, se han programado como parte de la aplicación. Este apéndice se presenta como referencia para los fragmentos de código que hacen uso de estas herramientas a lo largo de este documento, y como muestra del funcionamiento de estas.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Comparación de tipos imprecisos}
+En la mayoría de dispositivos los números de coma flotante tienen un cierto nivel de imprecisión. Esto no suele ser un problema porque suelen tener mucha más precisión de la necesaria, y en su defecto hay otras formas de conseguir aún más precisión. El problema es no se pueden comparar dichos números porque rara vez van a ser \textit{exactamente} idénticos. Para ello se han creado las funciones \texttt{compare\_float(n1, n2, precision)} y \texttt{compare\_vec(v1, v2, precision)}.
+
+Estas funciones comparan que el valor absoluto de la diferencia entre los dos números sea inferor a la precisión requerida que por defecto es $0.01$ pero puede configurarse con un parámetro. Como los vectores en glm utilizan números de coma flotante, se hace lo mismo para poder compararlos, pero esta vez comparando sus 3 componentes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Proyección punto-rayo y punto-línea}
+\label{sec:pointrayproj}
+Entendiendo un rayo como un elemento formado por un punto y una dirección y una línea como un segmento de un rayo delimitado por dos puntos, se han creado las funciones: 
+
+\begin{lstlisting}
+point_ray_projection(origen_rayo, direccion_rayo, punto)
+point_line_projection(punto_linea_A, punto_linea_B, referencia resultado) => booleano
+\end{lstlisting}
+
+Su funcionamiento es muy similar, de hecho la segunda hace uso de la primera para obtener el resultado, pero tienen dos diferencias importantes: \texttt{point\_ray\_projection} devuelve la distancia entre el origen del rayo y la proyección de nuestro punto, en la dirección especificada, mientras que la función \texttt{point\_line\_projection} devuelve un booleano que indica si la proyección está dentro de nuestra línea, y asigna a la referencia ``result" el punto exacto de la proyección.
+
+Hay diferentes situaciones en las que puede ser más útil una u otra: a veces se querrá saber el punto exacto de la proyección, otras veces la distancia de esta proyección respecto al punto de origen (sin necesidad de calcular el punto), y otras comprobar si esta proyección se encuentra delimitada entre dos puntos.
+
+El cálculo de la proyección rayo-punto se basa en las propiedades del producto punto. A continuación se explica el razonamiento por el cual el producto punto puede usarse para calcular una proyección entre dos vectores.
+
+El producto punto, o producto escalar de dos vectores, cumple la siguiente fórmula:
+\[ dot(A,B) = |A||B|*cos(\Theta) \]
+
+Donde $\theta$ es el ángulo que forman los dos vectores. Si asumimos que A es un vector normal (se garantizará normalizandolo desde la propia función), esto se reduce a:
+\[ dot(|A|,B) = |B|*cos(\Theta) \]
+
+Si miramos esta ecuación desde el punto de vista trigonométrico, $B$ puede entenderse como la hipotenusa del triángulo que forman $A$, $B$, y el vector de $B$ a la proyección de $B$ en $A$. El coseno, por definición, nos indica el ratio entre el lado contiguo de una esquina y la hipotenusa de un triángulo, por lo que al multiplicarlo por la magnitud de B obtenemos la longitud del lado contiguo, es decir, la distancia entre $A$ y la proyección de $B$.
+
+\[ distancia = dot(direccion, punto - origen) \]
+
+Una vez calculada esta distancia, se puede sacar el punto de proyección con la fórmula:
+\[ P = origen + |direccion| * distancia \]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Proyección punto-plano y punto-rectángulo}
+\label{sec:pointplaneproj}
+De un modo similar al visto en el apartado \ref{sec:pointrayproj}, se calcula la proyección a partir del producto punto.
+
+Para ello debe disponerse de la normal de dicho plano. En el caso de la proyección punto-plano se requiere como parámetro para definir el plano, pero en el caso de la proyección punto-rectángulo la calculará a partir de 3 puntos del plano. Este detalle es importante porque el orden de dichos puntos afectará a la dirección de la normal.
+
+Dados 3 puntos $A$, $B$ y $C$, la normal del plano que forman es el producto vectorial de los vectores que van de un punto hacia los otros dos, normalizados.
+
+\[ normal = |(B - A) \times (C - A)| \]
+
+Proyectando el punto sobre el rayo que forman la normal del plano y un punto cualquiera de este, podemos saber a qué distancia se encuentra el punto de dicho plano. Como disponemos de la normal, podemos invertirla y multiplicarla por la distancia obtenida para extraer la proyección sobre el plano.
+
+\[ distancia = dot(normal, punto - A) \]
+
+\[ P = punto - normal * distancia \]
+
+A diferencia de lo que ocurría en el apartado \ref{sec:pointrayproj}, este método no comprueba que la proyección se encuentre dentro del rectángulo. En el apartado \ref{in_rec} se explica como realizar esta comprobación.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Comprobar si cuatro puntos forman parte del mismo plano}
+\label{sec:check4pointplane}
+En un espacio de $D$ dimensiones, $D+1$ puntos forman parte del mismo espacio de $D-1$ dimensiones si el determinante de la matriz formada por las posiciones de los puntos organizadas verticalmente es 0 \footfullcite{points_sameplane}. En 3D:
+
+\[
+\begin{vmatrix}
+& x_1 & x_2 & x_3 & x_4 &\\ 
+& y_1 & y_2 & y_3 & y_4 &\\ 
+& z_1 & z_2 & z_3 & z_4 &\\ 
+& 1   & 1   & 1   & 1   &
+\end{vmatrix} = 0
+\]
+
+Glm ya dispone de una implementación para calcular el determinante de una matriz por lo que no es necesario profundizar más.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Comprobar si la proyección de un punto sobre un plano está dentro de un rectángulo}
+\label{in_rec}
+Aunque es similar, este se diferencia del apartado \ref{sec:check4pointplane} en que no se requiere que el punto que queremos comparar esté en el mismo plano que el resto. En algunos casos se desea comprobar si la proyección está dentro de un rectángulo sin importar cuál sea esa proyección.
+
+Para ello utilizamos la proyección punto-línea explicada en el apartado \ref{sec:pointrayproj}. La proyección del punto está dentro del rectángulo si se puede proyectar con éxito sobre sus cuatro lados. Poder proyectarlo sobre un lado implica que se podrá proyectar también sobre el lado opuesto, así que en el fondo solo se necesitan dos comprobaciones.
+
+\begin{lstlisting}
+in_rec(A, B, C, punto) => booleano:
+    VARIABLES p1, p2 COMO VECTOR
+    DEVOLVER
+        point_line_projection(A, B, punto, p1) 
+        Y 
+        point_line_projection(A, B, punto, p2)
+FIN DE FUNCION
+\end{lstlisting}

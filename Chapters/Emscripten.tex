@@ -50,7 +50,7 @@ WebGL está basado en OpenGL ES 2, y Emscripten puede reconocer las llamadas a e
 
 En el momento de realizar la exportación se deberá tener en cuenta que hay diversas incompatibilidades entre Vulkan y WebGL. En el fondo no se sustituyen directamente las llamadas a la API de Vulkan, sino que se detectan los puntos en que un conjunto de código se puede considerar equivalente a una llamada de OpenGL. El código de Vulkan es mucho más complejo y largo de lo que requiere OpenGL, y lo que en Vulkan requiere muchas líneas de código puede hacerse en OpenGL con una sola llamada.
 
-También será necesario adaptar los shaders y el proceso de carga de estos, dado que OpenGL ES 2 tiene limitaciones como la necesidad de definir el número de variables que recibirá el shader antes de compilarlo, dificultando la carga dinámica de luces.
+También será necesario adaptar los shaders y el proceso de carga de estos, dado que OpenGL ES 2 tiene limitaciones como la necesidad de definir el número de variables que recibirá el shader antes de compilarlo, dificultando la carga dinámica de luces. Aunque ambas APIs utilizan el mismo lenguaje de shading, GLSL, no es posible reutilizar sin más el código porque se utilizan diferentes versiones de este. En WebGL se utiliza la versión 100 de GLSL mientras que SPIR-V (véase \ref{shaders}) parte de la versión 450; se trata de versiones muy diferentes y aunque se han reutilizado algunos fragmentos, no es posible reaprovechar el código por completo.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
