@@ -5,6 +5,8 @@ Los shaders son programas diseñados para ejecutarse en la tarjeta gráfica\foot
 
 Aunque no se profundizará en lenguajes de shading, es importante saber que OpenGL ES utiliza el lenguaje de shading GLSL (OpenGL Shading Language)\footfullcite{khronos_glsl}. GLSL es un lenguaje basado en C que se compila en tiempo de ejecución mediante la API de OpenGL, a partir del propio código en texto plano. Vulkan en cambio utiliza el lenguaje intermedio SPIR-V (Standard Portable Intermediate Representation)\footfullcite{khronos_spir}. SPIR-V es el resultado de compilar GLSL mediante glslang\footfullcite{glslang} \footfullcite{spir_introduction}, y se provee en tiempo de ejecución a la API de Vulkan. Al haber sido procesado previamente SPIR-V carga sensiblemente más rápido en tiempo de ejecución. También es posible utilizar SPIR-V en OpenGL mediante una extensión (refiriéndonos a la API de escritorio, no su versión para sistemas embebidos)\footfullcite{opengl_spirext}.
 
+El hecho de que ambos partan del mismo lenguaje de shading será significativo a la hora de adaptar el código a WebGL.
+
 En cada iteración, se ejecuta por cada elemento en escena la pipeline de la API gráfica. La pipeline recibe como parámetro una serie de primitivas (puntos, líneas o polígonos) y ejecuta los shaders pasándoles esa información. En OpenGL, la pipeline puede simplificarse como se ve en la figura \ref{fig:opengl_pipeline}.
 
 \begin{figure}[H]
@@ -14,7 +16,7 @@ En cada iteración, se ejecuta por cada elemento en escena la pipeline de la API
     \label{fig:opengl_pipeline}
 \end{figure}
 
-De esta lista, los shaders marcados con una lista discontinua no son programables, sino que tienen un comportamiento predefinido. A parte de esos, los tipos que se han utilizado para el desarrollo de la aplicación son el Vertex Shader y el Fragment Shader.
+De esta lista, los shaders marcados con una lista discontinua no son programables, sino que tienen un comportamiento predefinido. A parte de esos, los tipos que se han utilizado para el desarrollo de la aplicación son el Vertex Shader y el Fragment Shader, dado que son compatibles con WebGL.
 
 \subsection{Vertex Shader}
 El Vertex Shader\footfullcite{ogl_superbible} se ejecuta independientemente por cada uno de los vértices de la malla a renderizar. Desde este shader se pueden modificar los atributos de cada uno de los vértices, recibidos desde la etapa de ``Vertex Fetch", como su posición, color, coordenadas de textura, o cualquier otra propiedad que arbitrariamente le hayamos atribuido. También pueden añadirse nuevos atributos si se desea. Una vez modificados, estos atributos se pasan como outputs del shader para ser utilizados en otros estadios de la pipeline, como el Fragment Shader.

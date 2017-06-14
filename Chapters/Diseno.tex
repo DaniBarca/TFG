@@ -16,9 +16,11 @@ También se encargará de actualizar en cada iteración los diferentes component
 
 \section{Gestión y generación de entidades}
 \label{managers}
+
 Como se ha explicado en la sección \ref{engine_design}, la aplicación se comunica con el motor a través de la escena y las entidades. Un primer punto importante es mantener el control de dichas entidades para que no acaben esparcidas por el código.
 
-Normalmente es suficiente con organizarlas en estructuras de datos dentro de la propia clase World (\ref{world}). Sin embargo, algunos casos específicos como las paredes y huecos (cuya generación se explica en el apartado \ref{walls_holes} o los interiores), son lo suficientemente complejos y numerosos como para tener su propio gestor.
+\subsection{Managers y generadores}
+Normalmente es suficiente con organizar las entidades en estructuras de datos dentro de la propia clase World (\ref{world}). Sin embargo, algunos casos específicos como las paredes y huecos (cuya generación se explica en el apartado \ref{walls_holes} o los interiores), son lo suficientemente complejos y numerosos como para tener su propio gestor.
 
 Dentro cada gestor hay una o varias listas de elementos que se organizan según sus índices en la lista, y que se inicializan con un tamaño predefinido. Se ha decidido hacer de este modo para evitar que la lista cambie de tamaño constantemente, provocando reinicializaciones de memoria. Una consecuencia es que debe hacerse una estimación del número de elementos que habrá y controlar mediante aserciones que no se supere ese número. 
 
@@ -29,6 +31,88 @@ En el caso de elementos que sean atómicos, como las ventanas o los interiores, 
 Para evitar que desde fuera del gestor se manipulen los índices, y para tener un identificador más sencillo de manejar, los gestores crean sus propios identificadores en forma de número entero y los relacionan con los elementos de los arrays mediante mapas. Esto permite por ejemplo, que si la posición de una pared cambia (porque se ha borrado una pared anterior) su identificador externo, el que tiene el usuario, siga significando lo mismo. Si se utilizaran índices cambiar el orden de los elementos resultaría en índices incorrectos, de este modo se evita que externamente haya que preocuparse por ello. El sistema es muy similar al que se describe en el apartado \ref{manta_id_management} sobre la gestión de identificadores del motor Manta.
 
 Aunque no es estrictamente necesario, los gestores de entidades están pensados para utilizarse a través del gestor de comandos \ref{command_pattern}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Generación de paredes}
+\label{wall_gen_design}
+El primer paso ha sido crear una definición de los datos que se recibirán para describir cómo ha de ser la pared. Se trata de una lista de puntos en dos dimensiones y un valor booleano que indica si esta lista debe cerrarse conectando el último punto con el primero. Esto último es importante porque, como se puede ver en la figura \ref{fig:vertical_view_walls}, la geometría de una esquina ``suelta" es diferente a la de una esquina que conecta dos paredes entre sí.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.65\linewidth]{Vista_Vertical_Paredes}
+    \caption{Paredes en vista vertical.}
+    \label{fig:vertical_view_walls}
+\end{figure}
+
+Estos datos nos permiten no sólo crear habitaciones sino también paredes únicas o incluso otros tipos de estructuras, normalmente interiores, similares a una pared. La intención es que en el futuro el programa pueda utilizarse en otras herramientas para hacer diseños más complicados como el plano de una planta completa de un edificio.
+
+Teniendo en cuenta la estructura de una malla, explicada en el apartado \ref{mesh_light_cam}, en la figura \ref{fig:io_generatewalls} se puede ver la conversión de los datos que se espera conseguir.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{IO_paredes}
+    \caption{Input y output del generador de paredes.}
+    \label{fig:io_generatewalls}
+\end{figure}
+
+El output está formado por listas de valores planos. Por ejemplo, la lista de vértices está formada por los valores de posición ``x,y,z" de cada uno sucesivamente.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Nomenclatura de los vértices}
+\label{nomenclatura_vertices}
+Para referir a cada uno de los vértices se ha definido la nomenclatura ``A, B, A2, B2" como puede verse en la figura \ref{fig:nomenclatura_vertices}, además de los correspondientes ``AH, BH, A2H, B2H" en la parte alta de la pared. Posteriormente, los índices de la pared se extraen de los que habría normalmente en un cubo, aprovechando que sus vértices se conectan del mismo modo.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Nomenclaturas_vertices}
+    \caption{Nomenclatura básica de los vértices.}
+    \label{fig:nomenclatura_vertices}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Generación de huecos}
+\label{holes_design}
+El siguiente paso es implementar la posibilidad de añadir puertas y ventanas a la estancia. Insertar el modelo correspondiente en cada caso no será un problema, pero para que el efecto sea convincente es necesario poder ver a través de estos. Eso implica que se debe que modificar la geometría de las paredes para que incluya huecos donde tengan que ir dichas ventanas y puertas.
+
+Del mismo modo que con las paredes inicialmente, se define un input: por cada hueco existe un punto 3D (que como se verá a continuación, no necesariamente debe colisionar con una pared), una altura y un ancho. El input/output del algoritmo completo para generar paredes quedaría como se puede ver en la figura \ref{fig:io_generatewindows}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{I_O_ventanas}
+    \caption{Nuevo input y output de GenerateWalls, incluyendo ventanas.}
+    \label{fig:io_generatewindows}
+\end{figure}
+
+Para empezar a introducir huecos en las paredes, estas se deben adaptar previamente. Es conveniente que la generación de ventanas se limite a trabajar sobre un solo plano, de modo que se eliminarán los planos anterior y posterior de la pared para añadirlos después con la nueva geometría. Aunque intuitivamente pueda parecer que esto supone simplificar la geometría respecto a lo que se ha hecho hasta ahora, en realidad se complica sensiblemente. Los planos anterior y posterior de la pared van a ser siempre idénticos, pero el plano posterior es algo más alargado debido a la geometría de las esquinas que se puede apreciar en la figura \ref{fig:nomenclatura_vertices}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Nomenclaturas_vertices_2}
+    \caption{Nomenclatura final de los vértices.}
+    \label{fig:nomenclatura_vertices_2}
+\end{figure}
+
+Se trata de una segunda iteración de lo visto en el apartado \ref{nomenclatura_vertices}. Con la nueva geometría las paredes se convierten en dos prismas triangulares unidos por dos planos superior e inferior de la pared. Con esto se consigue que los planos anterior y posterior que ahora le faltan a la pared sean totalmente idénticos aunque con las normales invertidas.
+
+Todas las ventanas o puertas han de ser necesariamente rectangulares. Esta es una precondición que se ha impuesto desde desarrollo para simplificar el cálculo de los agujeros, dado que es más sencillo incorporar geometrías más complejas incluyendo paredes falsas dentro del modelo de la ventana o puerta. Por ejemplo, si en algún momento se deseara incorporar una ventana redonda, sería más sencillo incluir 4 esquinas de pared a la ventana permitiendo que el hueco sea rectangular igualmente.
+
+Para generar los huecos se separará la pared en un conjunto de planos, dejando vacío el espacio que ocupa la ventana. Por lo tanto existirá una función atómica cuya entrada y salida sean una lista de planos. El la figura \ref{fig:wall_separacion} puede verse un ejemplo de cómo debe comportarse la función en 4 llamadas distintas.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{Separaciones_paredes}
+    \caption{Separación de la pared en planos}
+    \label{fig:wall_separacion}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

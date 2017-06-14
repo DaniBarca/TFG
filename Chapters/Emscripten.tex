@@ -1,3 +1,5 @@
+Aunque la exportación a Emscripten puede considerarse parte del proceso de implementación, su extensión e importancia en este documento hace que valga la pena dedicarle su propio capítulo.
+
 Uno de los puntos fuertes de nuestro planner es el poder ejecutarlo en web. El hecho de estar programado en C++, sin embargo, dificulta esta tarea. Teniendo cuenta una serie de consideraciones, es posible adaptar código C++ a web a través de Emscripten.
 
 \label{emscripten}
@@ -48,7 +50,7 @@ Como se ha podido ver en el apartado \ref{APIS}, el motor está pensado para fun
 
 WebGL está basado en OpenGL ES 2, y Emscripten puede reconocer las llamadas a esta segunda API y transformarlas en llamadas a WebGL. De modo que para hacer funcionar el motor será necesario con buscar los puntos donde se interactúe con la API de Vulkan y cambiarlos para que funcionen con OpenGL ES 2.
 
-En el momento de realizar la exportación se deberá tener en cuenta que hay diversas incompatibilidades entre Vulkan y WebGL. En el fondo no se sustituyen directamente las llamadas a la API de Vulkan, sino que se detectan los puntos en que un conjunto de código se puede considerar equivalente a una llamada de OpenGL. El código de Vulkan es mucho más complejo y largo de lo que requiere OpenGL, y lo que en Vulkan requiere muchas líneas de código puede hacerse en OpenGL con una sola llamada.
+En el momento de realizar la exportación se deberá tener en cuenta que Vulkan y WebGL son completamente incompatibles. En el fondo no se sustituyen directamente las llamadas a la API de Vulkan, sino que se detectan los puntos en que un conjunto de código se puede considerar equivalente a una llamada de OpenGL. El código de Vulkan es mucho más complejo y largo de lo que requiere OpenGL, y lo que en Vulkan requiere muchas líneas de código puede hacerse en OpenGL con una sola llamada.
 
 También será necesario adaptar los shaders y el proceso de carga de estos, dado que OpenGL ES 2 tiene limitaciones como la necesidad de definir el número de variables que recibirá el shader antes de compilarlo, dificultando la carga dinámica de luces. Aunque ambas APIs utilizan el mismo lenguaje de shading, GLSL, no es posible reutilizar sin más el código porque se utilizan diferentes versiones de este. En WebGL se utiliza la versión 100 de GLSL mientras que SPIR-V (véase \ref{shaders}) parte de la versión 450; se trata de versiones muy diferentes y aunque se han reutilizado algunos fragmentos, no es posible reaprovechar el código por completo.
 
@@ -131,7 +133,9 @@ En C++, las discordancias entre las distintas plataformas se resuelve mediante m
 
 Normalmente, el código que es específico para una plataforma provoca un fallo en el resto de plataformas, por lo que se requiere ``intercambiar" estos fragmentos de código incompatibles. También las librerías a utilizar pueden cambiar y la firma de algunas funciones.
 
-Cuando compilamos con Emscripten, se define la macro \texttt{\_\_EMSCRIPTEN\_\_}, permitiéndonos controlar fácilmente el código que se compilará en cada plataforma:
+Cuando compilamos con Emscripten, se define la macro \texttt{\_\_EMSCRIPTEN\_\_}, permitiéndonos controlar fácilmente el código que se compilará en cada plataforma.
+
+Un modo de entender lo que hacen las macros en C++ es imaginar que literalmente modifican el código. Desde el punto de vista del código generado, el uso de macros es equivalente a borrar y añadir la parte correspondiente a una u otra plataforma. Los distintos tipos de macros son simplemente formas diferentes de realizar modificaciones al código en tiempo de compilación.
 
 \begin{lstlisting}
 #ifdef __EMSCRIPTEN__
@@ -145,7 +149,7 @@ Cuando compilamos con Emscripten, se define la macro \texttt{\_\_EMSCRIPTEN\_\_}
 
 También es necesario en determinadas ocasiones utilizar funciones distintas para realizar la misma operación en diferentes plataformas. Sería posible solucionar este caso mediante la macro \texttt{\#ifdef}, pero tendría que hacerse cada vez que se utiliza dicha función.
 
-Las macros de C++ permiten incluir parámetros; por ejemplo la macro \texttt{\#define f(A) A * 2} cogería el parámetro ``A" y lo multiplicaría por dos. Lo interesante es que el usar las macros de este modo no requiere que ``A" tenga ningún tipo en especial, ni siquiera que sea una variable; siempre y cuando el código resultante al procesar la macro sea válido.
+Las macros de definición de C++ permiten incluir parámetros; por ejemplo la macro \texttt{\#define f(A) A * 2} cogería el parámetro ``A" y lo multiplicaría por dos. Lo interesante es que el usar las macros de este modo no requiere que ``A" tenga ningún tipo en especial, ni siquiera que sea una variable; siempre y cuando el código resultante al procesar la macro sea válido.
 
 Esta característica se utiliza, por ejemplo, con la función \texttt{fopen}. En Windows se requiere utilizar la función \texttt{fopen\_s}, que tiene una firma distinta que \texttt{fopen}; mientras que en Emscripten solo se reconoce esta última, provocando un fallo de compilación si se utiliza \texttt{fopen\_s}. Se puede solucionar esto con la macro:
 
@@ -247,11 +251,11 @@ onGetFile_error(argumentos):
         ruta_fichero,
         argumentos_callback_externo
         
-    SI intentos_por_ruta[ruta_fichero] < maximos_intentos
+    SI SE HA SUPERADO EL NUMERO DE INTENTOS
         NOTIFICAR ERROR
         DETENER_PROGRAMA
     SINO
-        emscripten_async_wget_data(ruta_fichero, argumentos, onGetFile_success, onGetFile_error)
+        LLAMAR A emscripten_async_wget_data CON LOS CALLBACKS onGetFile_success, onGetFile_error Y argumentos
     FINSI
 FIN DE FUNCION
 
@@ -263,8 +267,6 @@ onGetFile_success(argumentos, puntero_datos, tamaño_fichero):
         callback_externo,
         puntero_argumentos
         
-    VARIABLE datos_fichero
-    
     COPIAR A datos_fichero:
         puntero_datos,
         tamaño_fichero,
@@ -272,12 +274,12 @@ onGetFile_success(argumentos, puntero_datos, tamaño_fichero):
         
     COPIAR datos_fichero A cache
     
-    callback_externo(puntero_argumentos, datos_fichero)
+    LLAMAR AL CALLBACK EXTERNO CON datos_fichero
 FIN DE FUNCION
 
 getFile_async(ruta_fichero, puntero_argumentos, callback_externo):
     SI archivo EN cache ENTONCES:
-        callback_externo( puntero_argumentos, cache[ruta_fichero] )
+        LLAMAR AL CALLBACK EXTERNO CON LA INFORMACION
         FIN DE FUNCION
     FINSI
     
@@ -290,7 +292,7 @@ getFile_async(ruta_fichero, puntero_argumentos, callback_externo):
         callback_externo,
         puntero_argumentos
 
-	emscripten_async_wget_data(ruta_fichero, argumentos, onGetFile_success, onGetFile_error)
+	LLAMAR A emscripten_async_wget_data CON LOS CALLBACKS onGetFile_success, onGetFile_error Y argumentos
 FIN DE FUNCION
 \end{lstlisting}
 
@@ -319,33 +321,23 @@ callback_asset(puntero_argumentos, datos_fichero)
         
     BORRAR DATOS ANTIGUOS DE API GRAFICA
     
-    cargarAsset(ruta_fichero, VERDADERO, puntero_datos)
+    LLAMAR A cargarAsset EN MODO async_ready Y CON LOS DATOS DEL FICHERO
 FIN DE FUNCION
 
 cargarAsset(ruta_fichero, async_ready = FALSO, data = 0) => numero_entero:
-    VARIABLE id_asset
-    
     SI async_ready ENTONCES:
-        id_asset = relacion_nombre_id[ruta_fichero]
+        CARGAR DATOS DESDE LA VARIABLE DE DATOS
+        SUSTITUIR DATOS DEL ID CARGADO PREVIAMENTE POR LOS NUEVOS
     SINO
         SI ruta_fichero EN relacion_nombre_id ENTONCES:
-            DEVOLVER relacion_nombre_id[ruta_fichero]
+            DEVOLVER EL ID GUARDADO
+        SINO
+            CARGAR DATOS DE ARCHIVO DUMMY
+            LLAMAR A getFile_async PARA CARGAR ARCHIVO EN ALTA CALIDAD
         FINSI
-        id_asset = generar_nuevo_id();
-        data = getFile(ruta_fichero + ".mock")
     FINSI
     
-    VARIABLE api_id_asset
-    
-    CARGAR data A API GRAFICA, GUARDAR ID EN api_id_asset
-    
-    SI async_ready ENTONCES
-        sustituir_asset(id_asset, api_id_asset)
-    SINO
-        GestorFicheros.getFile_async(ruta_fichero, 0, callback_asset)
-    FINSI
-    
-    DEVOLVER id_asset
+    DEVOLVER ID DEL ASSET CARGADO
 FIN DE FUNCION
 \end{lstlisting}
 
@@ -357,7 +349,7 @@ En el tiempo que transcurre desde que se devuelve el identificador del asset has
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.60\linewidth]{async_file_manager}
+    \includegraphics[width=0.80\linewidth]{async_file_manager}
     \caption{Esquema de la carga de ficheros.}
     \label{fig:async_file_manager}
 \end{figure}
